@@ -19,15 +19,15 @@ main_content:
 
 
 #### content ####
-section_id: about
+section_id: status
 ----
-title: About HAMMA-Mjolnir
+title: Status Data
 ----
-description: Information about the HAMMA-Mjolnir System
+description: Status data for the HAMMA-Mjolnir System
 ----
-nav_label: About
+nav_label: Status
 ----
 content:
 
-Placeholder content.
+{status_data}
 ----
