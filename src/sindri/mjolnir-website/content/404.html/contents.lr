@@ -1,0 +1,18 @@
+_model: 404
+---
+_discoverable: false
+---
+full_title: Code 404 — Page Not Found
+---
+short_title: 404
+---
+bg_image: camg-fog-vt-bg.jpg
+---
+bg_image_fadeout: 0.3
+---
+message:
+
+It seems you've become lost in the fog.
+
+Try using the navigation bar above to return to a known destination.
+---

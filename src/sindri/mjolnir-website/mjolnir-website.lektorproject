@@ -1,0 +1,42 @@
+[project]
+name = HAMMA Mjolnir Status Dashboard
+themes = lektor-icon
+url_style = absolute
+included_assets = .nojekyll
+
+[servers.ghpages]
+target = ghpages+ssh://hamma-dev/mjolnir-website?cname=www.hamma.dev
+
+[theme_settings]
+title = Mjolnir Status Dashboard
+content_lang = en-US
+author = UAH HAMMA Group
+copyright = &copy; 2019 UAH HAMMA Group
+description = The status display interface for the Mjolnir system of networked HAMMA lightning sensors.
+keywords = lightning, science, iot, status, dashboard
+favicon_path = /static/images/favicon.png
+theme_fg_color = #ffffff
+theme_fg_alt_color = #eeeeee
+theme_bg_color = #19232d
+theme_bg_alt_color = #32414b
+theme_bg_accent_color = #333333
+theme_accent_color = #fda801
+theme_pipe_color = #ffd249
+custom_css =
+custom_js_main =
+custom_js_singlepage =
+content_security_policy = true
+content_security_policy_frame_src =
+content_security_policy_script_src =
+content_security_policy_style_src =
+content_security_policy_connect_src =
+loader_enable = false
+nav_logo_path = /static/images/favicon.png
+nav_logo_text = HAMMA Mjolnir
+nav_extralinks = NSSTC: https://nsstc.uah.edu/
+footer_links =
+footer_license_name =
+footer_license_link =
+gitter_room =
+disqus_name =
+atom_enable =

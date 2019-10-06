@@ -1,0 +1,33 @@
+_model: single-layout
+---
+
+
+show_home_nav: false
+---
+hero_title:
+---
+hero_description:
+---
+hero_image:
+---
+starting_block_bg: dark
+---
+
+
+
+main_content:
+
+
+#### content ####
+section_id: about
+----
+title: About HAMMA-Mjolnir
+----
+description: Information about the HAMMA-Mjolnir System
+----
+nav_label: About
+----
+content:
+
+Placeholder content.
+----
