@@ -3,6 +3,7 @@ Code to generate, build and deploy the HAMMA Mjolnir status website.
 """
 
 # Standard library imports
+import datetime
 from pathlib import Path
 import os
 import shutil
@@ -10,7 +11,11 @@ import stat
 import subprocess
 import time
 
+# Third party imports
+import pandas as pd
+
 # Local imports
+import sindri.plot
 import sindri.utils
 
 
@@ -28,8 +33,8 @@ def force_delete(action, name, exc):
 
 
 def process_data():
-    import datetime
-    return {"timestamp": datetime.datetime.now()}
+    status_data = sindri.plot.load_status_data(latest_n=8)
+    return status_data
 
 
 def generate_sources(data, source_path=LEKTOR_SOURCE_PATH,
@@ -44,11 +49,22 @@ def generate_sources(data, source_path=LEKTOR_SOURCE_PATH,
 
 
 def update_sources(data, project_path=LEKTOR_PROJECT_PATH):
+    image_location = "last_7_days.svg"
     mainpage_path = Path(project_path) / "content" / "contents.template"
-    data_towrite = {"status_data": f"Generation time: {data['timestamp']}"}
+    data_table_html = data.iloc[-1:, :].transpose().to_html()
+
+    output_source = (f"Generation time: {datetime.datetime.now()}\n\n"
+                     f"{data_table_html}\n\n"
+                     f"![Status Plot]({image_location})")
+    sindri.plot.plot_status_data(
+        data.iloc[::15, :],
+        project_path / "content" / image_location,
+        figsize=(9, 24),
+        )
+
     with open(mainpage_path, "r", encoding="utf-8", newline=None) as main_file:
         mainfile_content = main_file.read()
-    mainfile_content = mainfile_content.format(**data_towrite)
+    mainfile_content = mainfile_content.format(status_data=output_source)
     with open(mainpage_path.with_suffix(".lr"),
               "w", encoding="utf-8", newline="\n") as main_file:
         main_file.write(mainfile_content)
@@ -136,4 +152,5 @@ def start_serving_website(interval_minutes=5, verbose=0):
 
 
 if __name__ == "__main__":
-    start_serving_website()
+    pass
+    # start_serving_website()

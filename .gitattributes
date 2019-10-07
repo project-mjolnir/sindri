@@ -222,7 +222,7 @@ MANIFEST.in     text
 *.PNG       binary
 *.psd       binary
 *.odg       binary
-*.svg       binary
+*.svg       text
 *.svgz      binary
 *.tif       binary
 *.tiff      binary
