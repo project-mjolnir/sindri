@@ -46,6 +46,17 @@ def generate_argparser_main():
     parser_website.add_argument(
         "-v", "--verbose", action="count", help="Increase verbosity of output")
 
+    # Parser for the install-service subcommand
+    parser_install_service = subparsers.add_parser(
+        "install-service", help="Install Sindri as a systemd service (Linux)",
+        argument_default=argparse.SUPPRESS)
+    parser_install_service.add_argument(
+        "--platform", choices=("linux", ),
+        help="Manually override automatic platform detection")
+    parser_install_service.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="If passed, will print details of the exact actions executed")
+
     return parser_main
 
 
@@ -69,6 +80,9 @@ def main():
     elif subcommand == "webserver":
         import sindri.website
         sindri.website.start_serving_website(**vars(parsed_args))
+    elif subcommand == "install-service":
+        import sindri.install
+        sindri.install.install_sindri_service(**vars(parsed_args))
     else:
         parser_main.print_usage()
 

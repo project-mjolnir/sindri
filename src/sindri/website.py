@@ -10,6 +10,7 @@ import shutil
 import stat
 import subprocess
 import time
+import sys
 
 # Third party imports
 import pandas as pd
@@ -72,7 +73,7 @@ def update_sources(data, project_path=LEKTOR_PROJECT_PATH):
 
 def lektor_server(project_dir=LEKTOR_PROJECT_PATH, verbose=1):
     extra_args = {}
-    lektor_server_call = ["lektor", "server"]
+    lektor_server_call = [sys.executable, "-m", "lektor", "server"]
     if verbose == 0:
         extra_args = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
     elif verbose >= 2:
@@ -85,7 +86,7 @@ def lektor_server(project_dir=LEKTOR_PROJECT_PATH, verbose=1):
 
 def lektor_build(project_dir=LEKTOR_PROJECT_PATH, verbose=1):
     extra_args = {}
-    lektor_build_call = ["lektor", "build"]
+    lektor_build_call = [sys.executable, "-m", "lektor", "build"]
     if verbose == 0:
         extra_args = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
     elif verbose >= 2:
@@ -98,7 +99,7 @@ def lektor_deploy(project_dir=LEKTOR_PROJECT_PATH, verbose=1):
     extra_args = {}
     if verbose == 0:
         extra_args = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
-    subprocess.run(["lektor", "deploy", "ghpages"],
+    subprocess.run([sys.executable, "-m", "lektor", "deploy", "ghpages"],
                    check=True, cwd=project_dir, **extra_args)
 
 
@@ -149,8 +150,3 @@ def start_serving_website(interval_minutes=5, verbose=0):
             lektor_deploy(verbose=verbose)
     except KeyboardInterrupt:
         print("Keyboard interrupt recieved; exiting.")
-
-
-if __name__ == "__main__":
-    pass
-    # start_serving_website()

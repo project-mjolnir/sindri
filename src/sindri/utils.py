@@ -3,6 +3,7 @@ Utility functions for Sindri.
 """
 
 # Standard library imports
+import getpass
 from pathlib import Path
 import os
 import sys
@@ -46,3 +47,11 @@ def get_cache_dir():
                      / PACKAGE_NAME)
     os.makedirs(cache_dir, exist_ok=True)
     return cache_dir
+
+
+def get_actual_home_dir():
+    try:
+        username = os.environ["SUDO_USER"]
+    except KeyError:
+        username = getpass.getuser()
+    return Path("~" + username).expanduser()

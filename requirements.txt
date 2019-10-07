@@ -1,3 +1,4 @@
 lektor>=3.1
 matplotlib
 pandas
+serviceinstaller; sys_platform == 'linux'
