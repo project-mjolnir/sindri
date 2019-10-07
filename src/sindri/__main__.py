@@ -27,13 +27,24 @@ def generate_argparser_main():
         "help", help="Print help on Sindri's command line arguments")
 
     # Parser for the website subcommand
-    parser_webserver = subparsers.add_parser(
-        "webserver", help="Start the status website generator",
+    parser_website = subparsers.add_parser(
+        "generate-website", help="Generate or deploy the status website",
         argument_default=argparse.SUPPRESS)
-    parser_webserver.add_argument(
-        "--mode", type=str, choices=("test", "deploy", "production"),
-        help=("Run in test (local server), deploy (oneshot build & deploy) "
-              "or production (continous build & deploy) mode."))
+    parser_website.add_argument(
+        "--mode", type=str, choices=("test", "production"),
+        help="Run in test (local server) or production (build & deploy) mode")
+    parser_website.add_argument(
+        "-v", "--verbose", action="count", help="Increase verbosity of output")
+
+    # Parser for the webserver subcommand
+    parser_website = subparsers.add_parser(
+        "webserver", help="Run a continously updating static site generator",
+        argument_default=argparse.SUPPRESS)
+    parser_website.add_argument(
+        "--interval-minutes", type=int,
+        help="Minimum update interval of the site, in minutes")
+    parser_website.add_argument(
+        "-v", "--verbose", action="count", help="Increase verbosity of output")
 
     return parser_main
 
@@ -52,9 +63,12 @@ def main():
         print("Sindri version " + str(sindri.__version__))
     elif subcommand == "help":
         parser_main.print_help()
+    elif subcommand == "generate-website":
+        import sindri.website
+        sindri.website.generate_website(**vars(parsed_args))
     elif subcommand == "webserver":
         import sindri.website
-        sindri.website.main(**vars(parsed_args))
+        sindri.website.start_serving_website(**vars(parsed_args))
     else:
         parser_main.print_usage()
 
