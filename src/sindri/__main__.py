@@ -37,13 +37,16 @@ def generate_argparser_main():
         "-v", "--verbose", action="count", help="Increase verbosity of output")
 
     # Parser for the webserver subcommand
-    parser_website = subparsers.add_parser(
+    parser_webserver = subparsers.add_parser(
         "webserver", help="Run a continously updating static site generator",
         argument_default=argparse.SUPPRESS)
-    parser_website.add_argument(
+    parser_webserver.add_argument(
+        "--mode", type=str, choices=("test", "production"),
+        help="Run in test (local server) or production (build & deploy) mode")
+    parser_webserver.add_argument(
         "--update-frequency-min", type=float,
         help="Minimum update interval of the site, in minutes")
-    parser_website.add_argument(
+    parser_webserver.add_argument(
         "-v", "--verbose", action="count", help="Increase verbosity of output")
 
     # Parser for the install-service subcommand

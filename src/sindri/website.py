@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 
 # Local imports
 import sindri.plot
@@ -43,71 +44,52 @@ def generate_sources(source_path=LEKTOR_SOURCE_PATH,
     update_sources(project_path=output_path)
 
 
-def lektor_server(project_dir=LEKTOR_PROJECT_PATH, verbose=1):
+def run_lektor(command, project_dir=LEKTOR_PROJECT_PATH, verbose=1):
     extra_args = {}
-    lektor_server_call = [sys.executable, "-m", "lektor", "server"]
-    if verbose == 0:
+    lektor_call = [sys.executable, "-m", "lektor", command]
+    if verbose <= 0:
         extra_args = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
-    elif verbose >= 2:
-        lektor_server_call.append("-v")
-    try:
-        subprocess.run(lektor_server_call, cwd=project_dir, **extra_args)
-    except KeyboardInterrupt:
-        print("Keyboard interrupt recieved; exiting.")
+    elif verbose >= 2 and command in {"server", "build"}:
+        lektor_call.append("-v")
+
+    if command == "server":
+        subprocess.Popen(lektor_call, cwd=project_dir, **extra_args)
+    else:
+        subprocess.run(lektor_call, check=True,
+                       cwd=project_dir, **extra_args)
 
 
-def lektor_build(project_dir=LEKTOR_PROJECT_PATH, verbose=1):
-    extra_args = {}
-    lektor_build_call = [sys.executable, "-m", "lektor", "build"]
-    if verbose == 0:
-        extra_args = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
-    elif verbose >= 2:
-        lektor_build_call.append("-v")
-    subprocess.run(lektor_build_call,
-                   check=True, cwd=project_dir, **extra_args)
-
-
-def lektor_deploy(project_dir=LEKTOR_PROJECT_PATH, verbose=1):
-    extra_args = {}
-    if verbose == 0:
-        extra_args = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
-    subprocess.run([sys.executable, "-m", "lektor", "deploy", "ghpages"],
-                   check=True, cwd=project_dir, **extra_args)
-
-
-def generate_website_test(verbose=1):
-    generate_sources()
-    lektor_server(verbose=verbose)
-
-
-def generate_website_production(verbose=1):
-    generate_sources()
-    lektor_build(verbose=verbose)
-    lektor_deploy(verbose=verbose)
-
-
-def generate_website(mode="test", verbose=0):
+def generate_website(mode="test", verbose=0, wait_exit=True):
     # Fail fast if Lektor is not installed in the current environment
     import lektor
+    generate_sources()
     if mode == "test":
-        generate_website_test(verbose=verbose + 1)
+        run_lektor(command="server", verbose=verbose + 1)
+        if wait_exit:
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print("Keyboard interrupt recieved; exiting.")
     elif mode == "production":
-        generate_website_production(verbose=verbose + 1)
-    else:
-        raise ValueError("Mode must be one of 'test' or 'production'.")
+        run_lektor(command="build", verbose=verbose + 1)
+        run_lektor(command="deploy ghpages", verbose=verbose + 1)
 
 
 def start_serving_website(
+        mode="test",
         update_frequency_min=sindri.utils.WEBSITE_UPDATE_FREQUENCY_MIN,
-        verbose=0):
+        verbose=0,
+        ):
     # Fail fast if Lektor is not installed in the current environment
     import lektor
-    generate_website_production(verbose=verbose + 1)
+    generate_website(mode=mode, verbose=verbose, wait_exit=False)
     try:
         while True:
             sindri.utils.delay_until_desired_time(update_frequency_min)
             update_sources()
-            lektor_build(verbose=verbose)
-            lektor_deploy(verbose=verbose)
+            if mode == "production":
+                run_lektor(command="build", verbose=verbose)
+                run_lektor(command="deploy ghpages", verbose=verbose)
     except KeyboardInterrupt:
         print("Keyboard interrupt recieved; exiting.")
