@@ -41,7 +41,7 @@ def generate_argparser_main():
         "webserver", help="Run a continously updating static site generator",
         argument_default=argparse.SUPPRESS)
     parser_website.add_argument(
-        "--interval-minutes", type=int,
+        "--update-frequency-min", type=float,
         help="Minimum update interval of the site, in minutes")
     parser_website.add_argument(
         "-v", "--verbose", action="count", help="Increase verbosity of output")

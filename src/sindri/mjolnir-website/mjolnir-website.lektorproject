@@ -25,7 +25,8 @@ theme_pipe_color = #ffd249
 custom_css =
 custom_js_main =
 custom_js_singlepage =
-content_security_policy = true
+custom_head_content = <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+content_security_policy = false
 content_security_policy_frame_src =
 content_security_policy_script_src =
 content_security_policy_style_src =

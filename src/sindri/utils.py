@@ -6,8 +6,13 @@ Utility functions for Sindri.
 import getpass
 from pathlib import Path
 import os
+import stat
 import sys
 import time
+
+
+PACKAGE_NAME = "Sindri"
+WEBSITE_UPDATE_FREQUENCY_MIN = 6
 
 
 def time_ns():
@@ -28,7 +33,15 @@ def monotonic_ns():
 
 START_TIME = monotonic_ns()
 
-PACKAGE_NAME = "Sindri"
+
+def delay_until_desired_time(
+        interval_minutes, start_time=START_TIME, sleep=1):
+    next_time = (monotonic_ns() + interval_minutes * 60 * 1e9
+                 - (monotonic_ns() - start_time)
+                 % (interval_minutes * 60 * 1e9))
+    while monotonic_ns() < next_time:
+        time.sleep(
+            min([sleep, (next_time - monotonic_ns()) / 1e9]))
 
 
 def get_cache_dir():
@@ -55,3 +68,8 @@ def get_actual_home_dir():
     except KeyError:
         username = getpass.getuser()
     return Path("~" + username).expanduser()
+
+
+def force_delete(action, name, exc):
+    os.chmod(name, stat.S_IWRITE)
+    os.remove(name)

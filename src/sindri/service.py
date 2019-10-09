@@ -29,11 +29,14 @@ SERVICE_DEFAULTS = {
         "Type": "simple",
         "Environment": ("LEKTOR_DEPLOY_KEY_FILE="
                         f"{str(USER_HOME / '.ssh' / 'id_mjolnir')}"),
-        "ExecStart": f"{sys.executable} -m sindri webserver --interval 15",
+        "ExecStart": (
+            f"{sys.executable} -m sindri webserver --update-frequency-min "
+            f"{sindri.utils.WEBSITE_UPDATE_FREQUENCY_MIN}"
+            ),
         "Restart": "on-failure",
-        "RestartSec": str(300),
-        "TimeoutStartSec": str(300),
-        "TimeoutStopSec": str(300),
+        "RestartSec": str(360),
+        "TimeoutStartSec": str(360),
+        "TimeoutStopSec": str(360),
         },
     }
 
