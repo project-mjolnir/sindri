@@ -90,8 +90,14 @@ xmlhttp.onreadystatechange = function() {{
         }};
     }}
 }};
-xmlhttp.open('GET', '{status_json_path}', true);
-xmlhttp.send();
+
+function updateStatus() {{
+    xmlhttp.open('GET', '{status_json_path}', true);
+    xmlhttp.send();
+}};
+
+updateStatus();
+setInterval(updateStatus, {update_interval_s} * 1000);
 
 """
 

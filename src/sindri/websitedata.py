@@ -13,6 +13,8 @@ from sindri.utils import WEBSITE_UPDATE_FREQUENCY_MIN as UPDATE_FREQ
 
 STATUS_JSON_PATH = Path("status_data.json")
 
+STATUS_UPDATE_INTERVAL_SECONDS = 10
+
 
 STATUS_DASHBOARD_PLOTS = (
     {
@@ -107,7 +109,10 @@ def generate_dashboard_block(status_dashboard_plots=STATUS_DASHBOARD_PLOTS):
         plot_array.append(plot_setup)
     widgets = "\n".join(widget_blocks)
     update_script = sindri.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
-        plot_array="\n".join(plot_array), status_json_path=STATUS_JSON_PATH)
+        plot_array="\n".join(plot_array),
+        status_json_path=STATUS_JSON_PATH,
+        update_interval_s=STATUS_UPDATE_INTERVAL_SECONDS,
+        )
     dashboard_section = sindri.templates.DASHBOARD_SECTION_TEMPLATE.format(
         widgets=widgets, update_script=update_script)
     return dashboard_section
