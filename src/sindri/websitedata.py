@@ -3,6 +3,7 @@ Data, plots and calculations for the HAMMA Mjolnir status website.
 """
 
 # Standard library imports
+import copy
 import json
 import math
 from pathlib import Path
@@ -17,9 +18,19 @@ STATUS_JSON_PATH = Path("status_data.json")
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 
 
+STATUS_DATA_ARGS_DEFAULT = {
+    "delta_period": "1H",
+    "overlay_functions": (),
+    "threshold_period": "24H",
+    "threshold_type": "min",
+    }
+
+
 STATUS_DASHBOARD_PLOTS = (
     {
         "plot_id": "weblatency",
+        "plot_type": None,
+        "plot_data": {},
         "plot_metadata": {
             "plot_title": "Website Latency",
             "plot_description": "",
@@ -39,7 +50,7 @@ STATUS_DASHBOARD_PLOTS = (
                 ([UPDATE_FREQ + 1, UPDATE_FREQ + 3], "orange"),
                 ([UPDATE_FREQ + 3, 43200], "red"),
                 )),
-            "threashold_value": UPDATE_FREQ,
+            "threshold_value": UPDATE_FREQ,
             "number_color": "white",
             "number_suffix": " min",
             "plot_update_code": (
@@ -52,6 +63,13 @@ STATUS_DASHBOARD_PLOTS = (
         },
     {
         "plot_id": "battvoltage",
+        "plot_type": "numeric",
+        "plot_data": {
+            "delta_period": "1H",
+            "threshold_period": "24H",
+            "threshold_type": "min",
+            "variable": "adc_vb_f",
+            },
         "plot_metadata": {
             "plot_title": "Battery Voltage",
             "plot_description": "",
@@ -74,7 +92,7 @@ STATUS_DASHBOARD_PLOTS = (
                 ([14.6, 14.9], "orange"),
                 ([14.9, 99.9], "red"),
                 )),
-            "threashold_value": 13.1,
+            "threshold_value": 13.1,
             "number_color": "white",
             "number_suffix": " V",
             "plot_update_code": (
@@ -89,19 +107,67 @@ STATUS_DASHBOARD_PLOTS = (
 def safe_nan(value):
     if math.isnan(value):
         return -999
-    else:
-        return value
+    return value
 
 
-def generate_status_data(write_dir=None, write_path=STATUS_JSON_PATH):
+def get_plot_data(plot_type=None, **kwargs):
+    if not plot_type:
+        return None
+
+    data_args = copy.deepcopy(STATUS_DATA_ARGS_DEFAULT)
+    data_args.update(**kwargs)
     full_data = sindri.plot.load_status_data(latest_n=2)
+
+    plot_data = []
+    if plot_type == "numeric":
+        data_functions = (
+            (lambda full_data: full_data
+             .loc[:, data_args["variable"]].iloc[-1]),
+            (lambda full__data: full_data.last(data_args["delta_period"])
+             .loc[:, data_args["variable"]].iloc[0]),
+            (lambda full_data: full_data.last(data_args["threshold_period"])
+             .loc[:, data_args["variable"]]),
+            )
+
+        if data_args["overlay_functions"]:
+            overlay_functions = data_args["overlay_functions"]
+        else:
+            overlay_functions = [lambda value: value for __ in range(2)]
+            if data_args["threshold_type"] == "min":
+                overlay_functions.append(lambda val: min(val))
+            elif data_args["threshold_type"] == "max":
+                overlay_functions.append(lambda val: max(val))
+            elif data_args["threshold_type"] == "mean":
+                overlay_functions.append(lambda val: sum(val) / len(val))
+            else:
+                raise ValueError(
+                    "Either overlay_functions must be defined or "
+                    "threshold_type must be one of {'min', 'max', 'mean'} "
+                    "with plot_type 'numeric', not "
+                    + str(data_args['threshold_type'])
+                    )
+
+    elif plot_type == "custom":
+        data_functions = data_args["data_functions"]
+    else:
+        raise ValueError("Plot type must be one of {None, 'numeric'}, not "
+                         + str(plot_type))
+
+    plot_data = tuple(safe_nan(overlay_function(data_function(full_data)))
+                      for data_function, overlay_function
+                      in zip(data_functions, overlay_functions))
+
+    return plot_data
+
+
+def generate_status_data(status_dashboard_plots=STATUS_DASHBOARD_PLOTS,
+                         write_dir=None, write_path=STATUS_JSON_PATH):
     status_data = {
-        "battvoltage": [
-            safe_nan(full_data.loc[:, "adc_vb_f"].iloc[-1]),
-            safe_nan(full_data.loc[:, "adc_vb_f"].iloc[-60]),
-            ],
+        plot["plot_id"]:
+        get_plot_data(plot_type=plot["plot_type"], **plot["plot_data"])
+        for plot in status_dashboard_plots if plot["plot_type"]
         }
-    if write_dir is not None and write_dir is not False:
+    if write_dir is not None and write_dir is not False and status_data:
         with open(Path(write_dir) / write_path, "w",
                   encoding="utf-8", newline="\n") as jsonfile:
             json.dump(status_data, jsonfile, separators=(",", ":"))

@@ -141,7 +141,7 @@ DASHBOARD_PLOT_TEMPLATE = """
                 threshold: {{
                     line: {{ color: "black", width: 4 }},
                     thickness: 0.75,
-                    value: {threashold_value},
+                    value: {threshold_value},
                 }},
             }},
             number: {{
@@ -169,6 +169,7 @@ DASHBOARD_PLOT_TEMPLATE = """
 GAUGE_PLOT_UPDATE_CODE_VALUE = """
 plot.data[0].value = convertNaN(statusData.{plot_id}[0]);
 plot.data[0].delta.reference = convertNaN(statusData.{plot_id}[1]);
+plot.data[0].gauge.threshold.value = convertNaN(statusData.{plot_id}[2]);
 
 """
 
