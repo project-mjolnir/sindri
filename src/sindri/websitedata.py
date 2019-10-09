@@ -4,6 +4,7 @@ Data, plots and calculations for the HAMMA Mjolnir status website.
 
 # Standard library imports
 import json
+import math
 from pathlib import Path
 
 # Local imports
@@ -85,12 +86,19 @@ STATUS_DASHBOARD_PLOTS = (
     )
 
 
+def safe_nan(value):
+    if math.isnan(value):
+        return -999
+    else:
+        return value
+
+
 def generate_status_data(write_dir=None, write_path=STATUS_JSON_PATH):
     full_data = sindri.plot.load_status_data(latest_n=2)
     status_data = {
         "battvoltage": [
-            full_data.loc[:, "adc_vb_f"].iloc[-1],
-            full_data.loc[:, "adc_vb_f"].iloc[-60],
+            safe_nan(full_data.loc[:, "adc_vb_f"].iloc[-1]),
+            safe_nan(full_data.loc[:, "adc_vb_f"].iloc[-60]),
             ],
         }
     if write_dir is not None and write_dir is not False:

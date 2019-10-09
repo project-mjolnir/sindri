@@ -68,6 +68,13 @@ content:
 
 
 DASHBOARD_SCRIPT_TEMPLATE = """
+function convertNaN(value) {{
+    if (value == -999) {{
+        return NaN;
+    }};
+    return value;
+}};
+
 var config = {{
     editable: false,
     responsive: true,
@@ -160,8 +167,9 @@ DASHBOARD_PLOT_TEMPLATE = """
 """
 
 GAUGE_PLOT_UPDATE_CODE_VALUE = """
-plot.data[0].value = statusData.{plot_id}[0];
-plot.data[0].delta.reference = statusData.{plot_id}[1];
+plot.data[0].value = convertNaN(statusData.{plot_id}[0]);
+plot.data[0].delta.reference = convertNaN(statusData.{plot_id}[1]);
+
 """
 
 GAUGE_PLOT_UPDATE_CODE_COLOR = """
@@ -176,6 +184,7 @@ for (step of plot.data[0].gauge.steps) {
 if (foundStep == false) {
     plot.data[0].number.font.color = "white";
 };
+
 """
 
 GAUGE_PLOT_UPDATE_CODE_DEFAULT = (
