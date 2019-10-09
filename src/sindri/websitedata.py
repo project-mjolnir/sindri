@@ -36,14 +36,16 @@ STATUS_DASHBOARD_PLOTS = (
                 ([0, UPDATE_FREQ], "green"),
                 ([UPDATE_FREQ, UPDATE_FREQ + 1], "yellow"),
                 ([UPDATE_FREQ + 1, UPDATE_FREQ + 3], "orange"),
-                ([UPDATE_FREQ + 3, UPDATE_FREQ * 2.5], "red"),
+                ([UPDATE_FREQ + 3, 43200], "red"),
                 )),
             "threashold_value": UPDATE_FREQ,
+            "number_color": "white",
             "number_suffix": " min",
             "plot_update_code": (
                 "plot.data[0].value = (new Date() "
                 "- new Date(document.lastModified)) / (1000 * 60);\n"
                 f"plot.data[0].delta.reference = {UPDATE_FREQ};\n"
+                + sindri.templates.GAUGE_PLOT_UPDATE_CODE_COLOR
                 ),
             },
         },
@@ -63,19 +65,20 @@ STATUS_DASHBOARD_PLOTS = (
             "range": [10, 15],
             "tick0": 9,
             "steps": sindri.templates.generate_step_string((
-                ([10.0, 10.4], "red"),
+                ([0.00, 10.4], "red"),
                 ([10.4, 11.0], "orange"),
                 ([11.0, 12.0], "yellow"),
                 ([12.0, 14.2], "green"),
                 ([14.2, 14.6], "yellow"),
                 ([14.6, 14.9], "orange"),
-                ([14.9, 15.0], "red"),
+                ([14.9, 99.9], "red"),
                 )),
             "threashold_value": 13.1,
+            "number_color": "white",
             "number_suffix": " V",
             "plot_update_code": (
-                "plot.data[0].value = statusData.battvoltage[0];\n"
-                "plot.data[0].delta.reference = statusData.battvoltage[1];\n"
+                sindri.templates.GAUGE_PLOT_UPDATE_CODE_DEFAULT.format(
+                    plot_id="battvoltage")
                 ),
             },
         },
