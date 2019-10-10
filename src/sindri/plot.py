@@ -37,7 +37,7 @@ def load_status_data(
         status_data = status_data.iloc[::decimate, :]
     status_data["time"] = pd.to_datetime(status_data["time"])
     status_data["timestamp"] = pd.to_datetime(status_data["timestamp"])
-    status_data.set_index("time", inplace=True)
+    status_data.set_index("time", drop=False, inplace=True)
 
     return status_data
 

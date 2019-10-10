@@ -69,7 +69,7 @@ content:
 
 DASHBOARD_SCRIPT_TEMPLATE = """
 function convertNaN(value) {{
-    if (value == -999) {{
+    if (value == {sentinel_value_json}) {{
         return NaN;
     }};
     return value;
@@ -177,7 +177,7 @@ DASHBOARD_PLOT_TEMPLATE = """
                 steps: [ {steps}],
                 threshold: {{
                     line: {{ color: "black", width: 4 }},
-                    thickness: 0.75,
+                    thickness: {threshold_thickness},
                     value: {threshold_value},
                 }},
             }},
@@ -207,7 +207,7 @@ DASHBOARD_PLOT_TEMPLATE = """
 GAUGE_PLOT_UPDATE_CODE_VALUE = """
 data["value"] = convertNaN(statusData[plotid][0]);
 data["delta.reference"] = convertNaN(statusData[plotid][1]);
-data["threshold.value"] = convertNaN(statusData[plotid][2]);
+data["gauge.threshold.value"] = convertNaN(statusData[plotid][2]);
 
 """
 

@@ -37,6 +37,7 @@ setuptools.setup(
     install_requires=[
         "lektor>=3.1",
         "matplotlib",
+        "numpy",
         "pandas",
         ],
     entry_points={
