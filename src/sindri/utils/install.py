@@ -11,7 +11,7 @@ import sys
 import serviceinstaller
 
 # Local imports
-import sindri.service
+import sindri.config.service
 
 
 def log_setup(verbose=None):
@@ -28,10 +28,10 @@ def install_sindri_service(platform=None, verbose=None):
     log_setup(verbose)
 
     serviceinstaller.install_service(
-        sindri.service.SERVICE_DEFAULTS,
-        service_filename=sindri.service.SERVICE_FILENAME,
-        services_enable=sindri.service.SERVICES_ENABLE,
-        services_disable=sindri.service.SERVICES_DISABLE,
+        sindri.config.service.SERVICE_DEFAULTS,
+        service_filename=sindri.config.service.SERVICE_FILENAME,
+        services_enable=sindri.config.service.SERVICES_ENABLE,
+        services_disable=sindri.config.service.SERVICES_DISABLE,
         platform=platform,
     )
 

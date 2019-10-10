@@ -14,10 +14,15 @@ import time
 import numpy as np
 
 # Local imports
-import sindri.plot
-import sindri.templates
-from sindri.utils import WEBSITE_UPDATE_FREQUENCY_S as UPDATE_FREQ
-
+import sindri.process
+from sindri.utils.misc import WEBSITE_UPDATE_FREQUENCY_S as UPDATE_FREQ
+import sindri.website.templates
+from sindri.website.templates import (
+    GAUGE_PLOT_UPDATE_CODE,
+    GAUGE_PLOT_UPDATE_CODE_VALUE,
+    GAUGE_PLOT_UPDATE_CODE_COLOR,
+    generate_step_string,
+)
 
 STATUS_JSON_PATH = Path("status_data.json")
 SENTINEL_VALUE_JSON = -999
@@ -60,7 +65,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": UPDATE_FREQ // 2,
             "range": [0, UPDATE_FREQ * 2],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0, UPDATE_FREQ], "green"),
                 ([UPDATE_FREQ, UPDATE_FREQ + 60], "yellow"),
                 ([UPDATE_FREQ + 60, UPDATE_FREQ + 3 * 60], "orange"),
@@ -77,7 +82,7 @@ STATUS_DASHBOARD_PLOTS = {
                 "    maxLatency = data['value'];\n"
                 "    data['gauge.threshold.value'] = data['value'];\n"
                 "};\n"
-                + sindri.templates.GAUGE_PLOT_UPDATE_CODE_COLOR
+                + GAUGE_PLOT_UPDATE_CODE_COLOR
                 ),
             },
         "fast_update": True,
@@ -103,7 +108,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 60,
             "range": [0, 300],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0, 60], "green"),
                 ([60, 120], "yellow"),
                 ([120, 240], "orange"),
@@ -115,9 +120,9 @@ STATUS_DASHBOARD_PLOTS = {
             "number_suffix": " s",
             "plot_update_code": (
                 "\n".join((
-                    *sindri.templates.GAUGE_PLOT_UPDATE_CODE_VALUE
+                    *GAUGE_PLOT_UPDATE_CODE_VALUE
                     .splitlines()[0:2],
-                    sindri.templates.GAUGE_PLOT_UPDATE_CODE_COLOR
+                    GAUGE_PLOT_UPDATE_CODE_COLOR
                     ))),
             },
         "fast_update": False,
@@ -145,7 +150,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 60,
             "range": [0, 300],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0, 30], "green"),
                 ([30, 90], "yellow"),
                 ([90, 210], "orange"),
@@ -157,9 +162,9 @@ STATUS_DASHBOARD_PLOTS = {
             "number_suffix": " s",
             "plot_update_code": (
                 "\n".join((
-                    *sindri.templates.GAUGE_PLOT_UPDATE_CODE_VALUE
+                    *GAUGE_PLOT_UPDATE_CODE_VALUE
                     .splitlines()[0:2],
-                    sindri.templates.GAUGE_PLOT_UPDATE_CODE_COLOR
+                    GAUGE_PLOT_UPDATE_CODE_COLOR
                     ))),
             },
         "fast_update": False,
@@ -185,7 +190,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 1,
             "range": [10, 15],
             "tick0": 10,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0.00, 10.4], "red"),
                 ([10.4, 11.0], "orange"),
                 ([11.0, 12.0], "yellow"),
@@ -198,7 +203,7 @@ STATUS_DASHBOARD_PLOTS = {
             "threshold_value": 0,
             "number_color": "white",
             "number_suffix": " V",
-            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
+            "plot_update_code": GAUGE_PLOT_UPDATE_CODE,
             },
         "fast_update": False,
         },
@@ -223,7 +228,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 12,
             "range": [0, 60],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0.00, 4.00], "red"),
                 ([2.00, 12.0], "orange"),
                 ([12.0, 24.0], "yellow"),
@@ -233,7 +238,7 @@ STATUS_DASHBOARD_PLOTS = {
             "threshold_value": 0,
             "number_color": "white",
             "number_suffix": " V",
-            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
+            "plot_update_code": GAUGE_PLOT_UPDATE_CODE,
             },
         "fast_update": False,
         },
@@ -258,7 +263,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 2,
             "range": [0, 12],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0.0, 0.5], "red"),
                 ([0.5, 1.0], "orange"),
                 ([1.0, 2.5], "yellow"),
@@ -268,7 +273,7 @@ STATUS_DASHBOARD_PLOTS = {
             "threshold_value": 0,
             "number_color": "white",
             "number_suffix": " A",
-            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
+            "plot_update_code": GAUGE_PLOT_UPDATE_CODE,
             },
         "fast_update": False,
         },
@@ -293,7 +298,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 1,
             "range": [0, 8],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0.0, 0.5], "gray"),
                 ([0.5, 1.5], "blue"),
                 ([1.5, 2.5], "red"),
@@ -308,7 +313,7 @@ STATUS_DASHBOARD_PLOTS = {
             "threshold_value": 0,
             "number_color": "white",
             "number_suffix": "",
-            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
+            "plot_update_code": GAUGE_PLOT_UPDATE_CODE,
             },
         "fast_update": False,
         },
@@ -334,7 +339,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 5,
             "range": [0, 30],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0.00, 1.00], "red"),
                 ([1.00, 8.00], "orange"),
                 ([8.00, 12.0], "yellow"),
@@ -348,7 +353,7 @@ STATUS_DASHBOARD_PLOTS = {
             "threshold_value": 0,
             "number_color": "white",
             "number_suffix": " W",
-            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
+            "plot_update_code": GAUGE_PLOT_UPDATE_CODE,
             },
         "fast_update": False,
         },
@@ -373,7 +378,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 20,
             "range": [-20, 80],
             "tick0": -10,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([-20, -10], "navy"),
                 ([-10, 0.0], "blue"),
                 ([0.0, 10.], "teal"),
@@ -386,7 +391,7 @@ STATUS_DASHBOARD_PLOTS = {
             "threshold_value": 0,
             "number_color": "white",
             "number_suffix": "°C",
-            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
+            "plot_update_code": GAUGE_PLOT_UPDATE_CODE,
             },
         "fast_update": False,
         },
@@ -415,7 +420,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 10,
             "range": [0, 60],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0., 1.], "navy"),
                 ([1., 5.], "blue"),
                 ([5., 10], "teal"),
@@ -429,7 +434,7 @@ STATUS_DASHBOARD_PLOTS = {
             "threshold_value": 0,
             "number_color": "white",
             "number_suffix": "/min",
-            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
+            "plot_update_code": GAUGE_PLOT_UPDATE_CODE,
             },
         "fast_update": False,
         },
@@ -456,7 +461,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 3600,
             "range": [0, 21600],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0.000, 60.00], "red"),
                 ([60.00, 1800.], "orange"),
                 ([1800., 3600.], "yellow"),
@@ -467,7 +472,7 @@ STATUS_DASHBOARD_PLOTS = {
             "threshold_value": 0,
             "number_color": "white",
             "number_suffix": "",
-            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
+            "plot_update_code": GAUGE_PLOT_UPDATE_CODE,
             },
         "fast_update": False,
         },
@@ -496,7 +501,7 @@ STATUS_DASHBOARD_PLOTS = {
             "dtick": 20,
             "range": [0, 100],
             "tick0": 0,
-            "steps": sindri.templates.generate_step_string((
+            "steps": generate_step_string((
                 ([0.00, 0.90], "green"),
                 ([0.90, 5.00], "lime"),
                 ([5.00, 12.5], "yellow"),
@@ -508,7 +513,7 @@ STATUS_DASHBOARD_PLOTS = {
             "threshold_value": 0,
             "number_color": "white",
             "number_suffix": "",
-            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
+            "plot_update_code": GAUGE_PLOT_UPDATE_CODE,
             },
         "fast_update": False,
         },
@@ -545,7 +550,7 @@ def get_plot_data(plot_type=None, **kwargs):
 
     data_args = copy.deepcopy(STATUS_DATA_ARGS_DEFAULT)
     data_args.update(**kwargs)
-    full_data = sindri.plot.load_status_data(latest_n=3)
+    full_data = sindri.process.load_status_data(latest_n=3)
 
     plot_data = []
     if plot_type == "numeric":
@@ -615,16 +620,16 @@ def generate_dashboard_block(
     all_plots = []
     fast_update_plots = []
     for plot_id, plot in status_dashboard_plots.items():
-        widget_block = sindri.templates.DASHBOARD_ITEM_TEMPLATE.format(
-            plot_id=plot_id, **plot["plot_metadata"])
+        widget_block = (sindri.website.templates.DASHBOARD_ITEM_TEMPLATE
+                        .format(plot_id=plot_id, **plot["plot_metadata"]))
         widget_blocks.append(widget_block)
-        plot_setup = sindri.templates.DASHBOARD_PLOT_TEMPLATE.format(
-            plot_id=plot_id, **plot["plot_params"])
+        plot_setup = (sindri.website.templates.DASHBOARD_PLOT_TEMPLATE
+                      .format(plot_id=plot_id, **plot["plot_params"]))
         all_plots.append(plot_setup)
         if plot.get("fast_update", None):
             fast_update_plots.append(plot_id)
     widgets = "\n".join(widget_blocks)
-    update_script = sindri.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
+    update_script = sindri.website.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
         sentinel_value_json=SENTINEL_VALUE_JSON,
         all_plots="\n".join(all_plots),
         status_json_path=STATUS_JSON_PATH,
@@ -632,14 +637,14 @@ def generate_dashboard_block(
         fast_update_plots=fast_update_plots,
         update_interval_fast_s=status_update_interval_fast_seconds,
         )
-    dashboard_section = sindri.templates.DASHBOARD_SECTION_TEMPLATE.format(
-        widgets=widgets, update_script=update_script)
+    dashboard_section = (sindri.website.templates.DASHBOARD_SECTION_TEMPLATE
+                         .format(widgets=widgets, update_script=update_script))
     return dashboard_section
 
 
 def generate_mainfile_content():
-    mainfile_content = sindri.templates.MAINPAGE_SENSOR_TEMPLATE.format(
-        main_content="\n".join((
-            generate_dashboard_block(),
-            )))
+    mainfile_content = (sindri.website.templates.MAINPAGE_SENSOR_TEMPLATE
+                        .format(main_content="\n".join((
+                            generate_dashboard_block(),
+                            ))))
     return mainfile_content

@@ -7,10 +7,10 @@ from pathlib import Path
 import sys
 
 # Local imports
-import sindri.utils
+import sindri.utils.misc
 
 SERVICE_FILENAME = "sindri.service"
-USER_HOME = sindri.utils.get_actual_home_dir()
+USER_HOME = sindri.utils.misc.get_actual_home_dir()
 
 SERVICE_DEFAULTS = {
     "Unit": {
@@ -29,10 +29,7 @@ SERVICE_DEFAULTS = {
         "Type": "simple",
         "Environment": ("LEKTOR_DEPLOY_KEY_FILE="
                         f"{str(USER_HOME / '.ssh' / 'id_mjolnir')}"),
-        "ExecStart": (
-            f"{sys.executable} -m sindri webserver --update-frequency-s "
-            f"{sindri.utils.WEBSITE_UPDATE_FREQUENCY_S}"
-            ),
+        "ExecStart": "{sys.executable} -m sindri start --mode 'production'",
         "Restart": "on-failure",
         "RestartSec": str(360),
         "TimeoutStartSec": str(360),

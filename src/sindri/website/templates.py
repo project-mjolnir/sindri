@@ -6,9 +6,6 @@ Templates and other static data for constructing the Mjolnir status website.
 from pathlib import Path
 
 
-MAINPAGE_PATH = Path("content") / "contents.lr"
-
-
 MAINPAGE_SENSOR_TEMPLATE = """
 _model: single-layout
 ---

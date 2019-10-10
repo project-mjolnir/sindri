@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Basic plotting code for HAMMA Mjolnir monitoring data.
+Basic processing code for HAMMA Mjolnir data.
 """
 
 # Standard library imports

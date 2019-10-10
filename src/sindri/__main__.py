@@ -26,27 +26,37 @@ def generate_argparser_main():
     subparsers.add_parser(
         "help", help="Print help on Sindri's command line arguments")
 
-    # Parser for the website subcommand
-    parser_website = subparsers.add_parser(
-        "generate-website", help="Generate or deploy the status website",
+    # Parser for the start subcommand
+    parser_start = subparsers.add_parser(
+        "start", help="Run Sindri as a continously updating service",
         argument_default=argparse.SUPPRESS)
-    parser_website.add_argument(
+    parser_start.add_argument(
         "--mode", type=str, choices=("test", "production"),
-        help="Run in test (local server) or production (build & deploy) mode")
-    parser_website.add_argument(
+        help="Run Sindri in test or production mode")
+    parser_start.add_argument(
         "-v", "--verbose", action="count", help="Increase verbosity of output")
 
-    # Parser for the webserver subcommand
-    parser_webserver = subparsers.add_parser(
-        "webserver", help="Run a continously updating static site generator",
+    # Parser for the deploy-website subcommand
+    parser_deploy = subparsers.add_parser(
+        "deploy-website", help="Generate or deploy the status website",
         argument_default=argparse.SUPPRESS)
-    parser_webserver.add_argument(
+    parser_deploy.add_argument(
         "--mode", type=str, choices=("test", "production"),
         help="Run in test (local server) or production (build & deploy) mode")
-    parser_webserver.add_argument(
+    parser_deploy.add_argument(
+        "-v", "--verbose", action="count", help="Increase verbosity of output")
+
+    # Parser for the serve-website subcommand
+    parser_serve = subparsers.add_parser(
+        "serve-website", help="Run a continously updating website generator",
+        argument_default=argparse.SUPPRESS)
+    parser_serve.add_argument(
+        "--mode", type=str, choices=("test", "production"),
+        help="Run in test (local server) or production (build & deploy) mode")
+    parser_serve.add_argument(
         "--update-frequency-s", type=float,
         help="Minimum update interval of the site, in seconds")
-    parser_webserver.add_argument(
+    parser_serve.add_argument(
         "-v", "--verbose", action="count", help="Increase verbosity of output")
 
     # Parser for the install-service subcommand
@@ -77,15 +87,18 @@ def main():
         print("Sindri version " + str(sindri.__version__))
     elif subcommand == "help":
         parser_main.print_help()
-    elif subcommand == "generate-website":
-        import sindri.website
-        sindri.website.generate_website(**vars(parsed_args))
-    elif subcommand == "webserver":
-        import sindri.website
-        sindri.website.start_serving_website(**vars(parsed_args))
+    elif subcommand == "start":
+        import sindri.start
+        sindri.start.start_sindri(**vars(parsed_args))
+    elif subcommand == "deploy-website":
+        import sindri.website.serve
+        sindri.website.serve.deploy_website(**vars(parsed_args))
+    elif subcommand == "serve-website":
+        import sindri.website.serve
+        sindri.website.serve.start_serving_website(**vars(parsed_args))
     elif subcommand == "install-service":
-        import sindri.install
-        sindri.install.install_sindri_service(**vars(parsed_args))
+        import sindri.utils.install
+        sindri.utils.install.install_sindri_service(**vars(parsed_args))
     else:
         parser_main.print_usage()
 
