@@ -84,6 +84,9 @@ var config = {{
     displayModeBar: false,
 }};
 
+var lastUpdate = null
+var maxLatency = 0
+
 var allPlots = {{
     {all_plots}
 }};
@@ -98,8 +101,6 @@ function updatePlot(allPlots, plotid, statusData) {{
     Plotly.restyle(plotid, data);
 }};
 
-
-var lastUpdate = null
 
 var fastUpdatePlots = {fast_update_plots};
 

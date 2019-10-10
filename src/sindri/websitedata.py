@@ -58,6 +58,10 @@ STATUS_DASHBOARD_PLOTS = {
                 "data['value'] = (new Date() "
                 "- lastUpdate) / (1000);\n"
                 f"data['delta.reference'] = {UPDATE_FREQ};\n"
+                "if (data['value'] > maxLatency) {\n"
+                "    maxLatency = data['value'];\n"
+                "    data['gauge.threshold.value'] = data['value'];\n"
+                "};\n"
                 + sindri.templates.GAUGE_PLOT_UPDATE_CODE_COLOR
                 ),
             },
