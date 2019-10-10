@@ -75,6 +75,7 @@ function convertNaN(value) {{
     return value;
 }};
 
+
 var config = {{
     editable: false,
     responsive: true,
@@ -83,19 +84,55 @@ var config = {{
     displayModeBar: false,
 }};
 
-var plotArray = [
-    {plot_array}
-]
+var allPlots = {{
+    {all_plots}
+}};
+
+
+Object.keys(allPlots).forEach(function(plotid) {{
+    Plotly.newPlot(plotid, allPlots[plotid].data, allPlots[plotid].layout, config);
+}});
+
+function updatePlot(allPlots, plotid, statusData) {{
+    data = allPlots[plotid].updateFunction(allPlots, plotid, statusData);
+    Plotly.restyle(plotid, data);
+}};
+
+
+var lastUpdate = null
+
+var fastUpdatePlots = {fast_update_plots};
+
+function fastUpdateStatus() {{
+    if (fastUpdatePlots.length > 0 && lastUpdate != null) {{
+        for (plotid of fastUpdatePlots) {{
+            updatePlot(allPlots, plotid, null);
+        }};
+    }};
+}};
+
+if (fastUpdatePlots.length > 0) {{
+    setInterval(fastUpdateStatus, {update_interval_fast_s} * 1000);
+}};
 
 var xmlhttp = new XMLHttpRequest()
 xmlhttp.onreadystatechange = function() {{
     if (this.readyState == 4 && this.status == 200) {{
         var statusData = JSON.parse(this.responseText);
-        for (plot of plotArray) {{
-            plot = plot.updateFunction(statusData, plot)
-            Plotly.newPlot(plot.id, plot.data, plot.layout, config);
+        var currentUpdate = new Date(statusData.lastupdatetimestamp);
+        if (lastUpdate == null || lastUpdate != currentUpdate) {{
+            if (lastUpdate == null) {{
+                lastUpdate = currentUpdate;
+                fastUpdateStatus();
+            }};
+            lastUpdate = currentUpdate;
+            Object.keys(allPlots).forEach(function(plotid) {{
+                if (! fastUpdatePlots.includes(plotid)) {{
+                    updatePlot(allPlots, plotid, statusData);
+                }};
+            }});
         }};
-    }}
+    }};
 }};
 
 function updateStatus() {{
@@ -110,8 +147,7 @@ setInterval(updateStatus, {update_interval_s} * 1000);
 
 
 DASHBOARD_PLOT_TEMPLATE = """
-{{
-    id: "{plot_id}",
+{plot_id}: {{
     data: [
         {{
             domain: {{ x: [0, 1], y: [0, 1] }},
@@ -154,43 +190,43 @@ DASHBOARD_PLOT_TEMPLATE = """
         autosize: true,
         font: {{ color: "white" }},
         height: 200,
-        margin: {{ t: 15, b: 5, l: 25, r: 25 }},
+        margin: {{ t: 25, b: 5, l: 25, r: 25 }},
         paper_bgcolor: "rgba(0, 0, 0, 0)",
         plot_bgcolor: "rgba(0, 0, 0, 0)",
     }},
-    updateFunction: function(statusData, plot) {{
+    updateFunction: function(allPlots, plotid, statusData) {{
+        data = {{}};
         {plot_update_code}
-        return plot;
+        return data;
     }},
 }},
 
 """
 
 GAUGE_PLOT_UPDATE_CODE_VALUE = """
-plot.data[0].value = convertNaN(statusData.{plot_id}[0]);
-plot.data[0].delta.reference = convertNaN(statusData.{plot_id}[1]);
-plot.data[0].gauge.threshold.value = convertNaN(statusData.{plot_id}[2]);
+data["value"] = convertNaN(statusData[plotid][0]);
+data["delta.reference"] = convertNaN(statusData[plotid][1]);
+data["threshold.value"] = convertNaN(statusData[plotid][2]);
 
 """
 
 GAUGE_PLOT_UPDATE_CODE_COLOR = """
 var foundStep = false;
-for (step of plot.data[0].gauge.steps) {
-    if (plot.data[0].value >= step.range[0] && plot.data[0].value <= step.range[1]) {
-        plot.data[0].number.font.color = step.color;
+for (step of allPlots[plotid].data[0].gauge.steps) {
+    if (data["value"] >= step.range[0] && data["value"] <= step.range[1]) {
+        data["number.font.color"] = step.color;
         foundStep = true;
         break;
     };
 };
 if (foundStep == false) {
-    plot.data[0].number.font.color = "white";
+    data["number.font.color"] = "white";
 };
 
 """
 
-GAUGE_PLOT_UPDATE_CODE_DEFAULT = (
-    GAUGE_PLOT_UPDATE_CODE_VALUE
-    + GAUGE_PLOT_UPDATE_CODE_COLOR.replace("{", "{{").replace("}", "}}"))
+GAUGE_PLOT_UPDATE_CODE = (GAUGE_PLOT_UPDATE_CODE_VALUE
+                          + GAUGE_PLOT_UPDATE_CODE_COLOR)
 
 GAUGE_PLOT_STEPS_TEMPLATE = "{{ range: {step_range}, color: '{color}' }}, "
 

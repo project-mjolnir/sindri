@@ -12,7 +12,7 @@ import time
 
 
 PACKAGE_NAME = "Sindri"
-WEBSITE_UPDATE_FREQUENCY_MIN = 6
+WEBSITE_UPDATE_FREQUENCY_S = 360
 
 
 def time_ns():
@@ -35,10 +35,10 @@ START_TIME = monotonic_ns()
 
 
 def delay_until_desired_time(
-        interval_minutes, start_time=START_TIME, sleep=1):
-    next_time = (monotonic_ns() + interval_minutes * 60 * 1e9
+        interval_seconds, start_time=START_TIME, sleep=1):
+    next_time = (monotonic_ns() + interval_seconds * 1e9
                  - (monotonic_ns() - start_time)
-                 % (interval_minutes * 60 * 1e9))
+                 % (interval_seconds * 1e9))
     while monotonic_ns() < next_time:
         time.sleep(
             min([sleep, (next_time - monotonic_ns()) / 1e9]))

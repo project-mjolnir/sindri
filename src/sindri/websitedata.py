@@ -7,15 +7,17 @@ import copy
 import json
 import math
 from pathlib import Path
+import time
 
 # Local imports
 import sindri.templates
-from sindri.utils import WEBSITE_UPDATE_FREQUENCY_MIN as UPDATE_FREQ
+from sindri.utils import WEBSITE_UPDATE_FREQUENCY_S as UPDATE_FREQ
 
 
 STATUS_JSON_PATH = Path("status_data.json")
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
+STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
 
 
 STATUS_DATA_ARGS_DEFAULT = {
@@ -26,9 +28,8 @@ STATUS_DATA_ARGS_DEFAULT = {
     }
 
 
-STATUS_DASHBOARD_PLOTS = (
-    {
-        "plot_id": "weblatency",
+STATUS_DASHBOARD_PLOTS = {
+    "weblatency": {
         "plot_type": None,
         "plot_data": {},
         "plot_metadata": {
@@ -42,27 +43,27 @@ STATUS_DASHBOARD_PLOTS = (
             "decreasing_color": "green",
             "increasing_color": "red",
             "dtick": UPDATE_FREQ // 2,
-            "range": [0, UPDATE_FREQ * 2.5],
+            "range": [0, UPDATE_FREQ * 2],
             "tick0": 0,
             "steps": sindri.templates.generate_step_string((
                 ([0, UPDATE_FREQ], "green"),
-                ([UPDATE_FREQ, UPDATE_FREQ + 1], "yellow"),
-                ([UPDATE_FREQ + 1, UPDATE_FREQ + 3], "orange"),
-                ([UPDATE_FREQ + 3, 43200], "red"),
+                ([UPDATE_FREQ, UPDATE_FREQ + 60], "yellow"),
+                ([UPDATE_FREQ + 60, UPDATE_FREQ + 3 * 60], "orange"),
+                ([UPDATE_FREQ + 3 * 60, 4320000], "red"),
                 )),
             "threshold_value": UPDATE_FREQ,
             "number_color": "white",
-            "number_suffix": " min",
+            "number_suffix": " s",
             "plot_update_code": (
-                "plot.data[0].value = (new Date() "
-                "- new Date(document.lastModified)) / (1000 * 60);\n"
-                f"plot.data[0].delta.reference = {UPDATE_FREQ};\n"
+                "data['value'] = (new Date() "
+                "- lastUpdate) / (1000);\n"
+                f"data['delta.reference'] = {UPDATE_FREQ};\n"
                 + sindri.templates.GAUGE_PLOT_UPDATE_CODE_COLOR
                 ),
             },
+        "fast_update": True,
         },
-    {
-        "plot_id": "battvoltage",
+    "battvoltage": {
         "plot_type": "numeric",
         "plot_data": {
             "delta_period": "1H",
@@ -95,13 +96,11 @@ STATUS_DASHBOARD_PLOTS = (
             "threshold_value": 13.1,
             "number_color": "white",
             "number_suffix": " V",
-            "plot_update_code": (
-                sindri.templates.GAUGE_PLOT_UPDATE_CODE_DEFAULT.format(
-                    plot_id="battvoltage")
-                ),
+            "plot_update_code": sindri.templates.GAUGE_PLOT_UPDATE_CODE,
             },
+        "fast_update": False,
         },
-    )
+    }
 
 
 def safe_nan(value):
@@ -163,10 +162,12 @@ def get_plot_data(plot_type=None, **kwargs):
 def generate_status_data(status_dashboard_plots=STATUS_DASHBOARD_PLOTS,
                          write_dir=None, write_path=STATUS_JSON_PATH):
     status_data = {
-        plot["plot_id"]:
-        get_plot_data(plot_type=plot["plot_type"], **plot["plot_data"])
-        for plot in status_dashboard_plots if plot["plot_type"]
+        plot_id:
+            get_plot_data(plot_type=plot["plot_type"], **plot["plot_data"])
+        for plot_id, plot in status_dashboard_plots.items()
+        if plot["plot_type"]
         }
+    status_data["lastupdatetimestamp"] = int(time.time() * 1000)
     if write_dir is not None and write_dir is not False and status_data:
         with open(Path(write_dir) / write_path, "w",
                   encoding="utf-8", newline="\n") as jsonfile:
@@ -174,21 +175,30 @@ def generate_status_data(status_dashboard_plots=STATUS_DASHBOARD_PLOTS,
     return status_data
 
 
-def generate_dashboard_block(status_dashboard_plots=STATUS_DASHBOARD_PLOTS):
+def generate_dashboard_block(
+        status_dashboard_plots=STATUS_DASHBOARD_PLOTS,
+        status_update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
+        status_update_interval_fast_seconds=STATUS_UPDATE_INTERVAL_FAST_SECONDS
+        ):
     widget_blocks = []
-    plot_array = []
-    for plot in status_dashboard_plots:
+    all_plots = []
+    fast_update_plots = []
+    for plot_id, plot in status_dashboard_plots.items():
         widget_block = sindri.templates.DASHBOARD_ITEM_TEMPLATE.format(
-            plot_id=plot["plot_id"], **plot["plot_metadata"])
+            plot_id=plot_id, **plot["plot_metadata"])
         widget_blocks.append(widget_block)
         plot_setup = sindri.templates.DASHBOARD_PLOT_TEMPLATE.format(
-            plot_id=plot["plot_id"], **plot["plot_params"])
-        plot_array.append(plot_setup)
+            plot_id=plot_id, **plot["plot_params"])
+        all_plots.append(plot_setup)
+        if plot.get("fast_update", None):
+            fast_update_plots.append(plot_id)
     widgets = "\n".join(widget_blocks)
     update_script = sindri.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
-        plot_array="\n".join(plot_array),
+        all_plots="\n".join(all_plots),
         status_json_path=STATUS_JSON_PATH,
-        update_interval_s=STATUS_UPDATE_INTERVAL_SECONDS,
+        update_interval_s=status_update_interval_seconds,
+        fast_update_plots=fast_update_plots,
+        update_interval_fast_s=status_update_interval_fast_seconds,
         )
     dashboard_section = sindri.templates.DASHBOARD_SECTION_TEMPLATE.format(
         widgets=widgets, update_script=update_script)

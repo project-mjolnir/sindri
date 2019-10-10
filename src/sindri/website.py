@@ -78,7 +78,7 @@ def generate_website(mode="test", verbose=0, wait_exit=True):
 
 def start_serving_website(
         mode="test",
-        update_frequency_min=sindri.utils.WEBSITE_UPDATE_FREQUENCY_MIN,
+        update_frequency_s=sindri.utils.WEBSITE_UPDATE_FREQUENCY_S,
         verbose=0,
         ):
     # Fail fast if Lektor is not installed in the current environment
@@ -86,7 +86,7 @@ def start_serving_website(
     generate_website(mode=mode, verbose=verbose, wait_exit=False)
     try:
         while True:
-            sindri.utils.delay_until_desired_time(update_frequency_min)
+            sindri.utils.delay_until_desired_time(update_frequency_s)
             update_sources()
             if mode == "production":
                 run_lektor(command="build", verbose=verbose)

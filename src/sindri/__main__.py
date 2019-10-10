@@ -44,8 +44,8 @@ def generate_argparser_main():
         "--mode", type=str, choices=("test", "production"),
         help="Run in test (local server) or production (build & deploy) mode")
     parser_webserver.add_argument(
-        "--update-frequency-min", type=float,
-        help="Minimum update interval of the site, in minutes")
+        "--update-frequency-s", type=float,
+        help="Minimum update interval of the site, in seconds")
     parser_webserver.add_argument(
         "-v", "--verbose", action="count", help="Increase verbosity of output")
 

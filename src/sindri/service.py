@@ -30,8 +30,8 @@ SERVICE_DEFAULTS = {
         "Environment": ("LEKTOR_DEPLOY_KEY_FILE="
                         f"{str(USER_HOME / '.ssh' / 'id_mjolnir')}"),
         "ExecStart": (
-            f"{sys.executable} -m sindri webserver --update-frequency-min "
-            f"{sindri.utils.WEBSITE_UPDATE_FREQUENCY_MIN}"
+            f"{sys.executable} -m sindri webserver --update-frequency-s "
+            f"{sindri.utils.WEBSITE_UPDATE_FREQUENCY_S}"
             ),
         "Restart": "on-failure",
         "RestartSec": str(360),
