@@ -119,13 +119,15 @@ def get_plot_data(plot_type=None, **kwargs):
 
     plot_data = []
     if plot_type == "numeric":
+        if callable(data_args["variable"]):
+            base_data = data_args["variable"](full_data)
+        else:
+            base_data = full_data.loc[:, data_args["variable"]]
         data_functions = (
-            (lambda full_data: full_data
-             .loc[:, data_args["variable"]].iloc[-1]),
-            (lambda full__data: full_data.last(data_args["delta_period"])
-             .loc[:, data_args["variable"]].iloc[0]),
-            (lambda full_data: full_data.last(data_args["threshold_period"])
-             .loc[:, data_args["variable"]]),
+            (lambda full_data: base_data.iloc[-1]),
+            (lambda full__data:
+             base_data.last(data_args["delta_period"]).iloc[0]),
+            (lambda full_data: base_data.last(data_args["threshold_period"])),
             )
 
         if data_args["overlay_functions"]:
