@@ -45,6 +45,8 @@ CALCULATED_COLUMNS = (
      lambda full_data: full_data["crc_errors_delta"].last("1H").sum()),
     ("crc_errors_daily", None,
      lambda full_data: full_data["crc_errors_delta"].last("24H").sum()),
+    ("sensor_uptime", None,
+     lambda full_data: full_data["sequence_count"] / (60 * 60)),
     )
 
 
