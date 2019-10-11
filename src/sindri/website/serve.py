@@ -24,9 +24,13 @@ SOURCE_IGNORE_PATTERNS = (
     "temp", "*.tmp", "*.temp", "*.bak", "*.log", "*.orig", "example-site")
 
 
-def update_project(project_path=LEKTOR_PROJECT_PATH):
+def update_data(project_path=LEKTOR_PROJECT_PATH):
     sindri.website.generate.generate_status_data(
         write_dir=project_path / MAINPAGE_PATH.parent)
+
+
+def update_project(project_path=LEKTOR_PROJECT_PATH):
+    update_data(project_path=project_path)
 
     with open(Path(project_path) / MAINPAGE_PATH, "w",
               encoding="utf-8", newline="\n") as main_file:
@@ -87,7 +91,7 @@ def start_serving_website(
     try:
         while True:
             sindri.utils.misc.delay_until_desired_time(update_frequency_s)
-            update_project()
+            update_data()
             if mode == "production":
                 run_lektor(command="build", verbose=verbose)
                 run_lektor(command="deploy ghpages", verbose=verbose)
