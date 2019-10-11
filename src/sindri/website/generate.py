@@ -15,6 +15,7 @@ import numpy as np
 
 # Local imports
 import sindri.process
+import sindri.utils.misc
 from sindri.utils.misc import WEBSITE_UPDATE_FREQUENCY_S as UPDATE_FREQ
 import sindri.website.templates
 from sindri.website.templates import (
@@ -29,8 +30,6 @@ SENTINEL_VALUE_JSON = -999
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
-
-TRIGGER_SIZE_MB = 22.0
 
 
 STATUS_DATA_ARGS_DEFAULT = {
@@ -323,8 +322,7 @@ STATUS_DASHBOARD_PLOTS = {
             "delta_period": "1H",
             "threshold_period": "24H",
             "threshold_type": "min",
-            "variable": (lambda full_data:
-                         full_data["adc_vl_f"] * full_data["adc_il_f"]),
+            "variable": "power_load",
             },
         "plot_metadata": {
             "plot_title": "Load Power",
@@ -401,11 +399,7 @@ STATUS_DASHBOARD_PLOTS = {
             "delta_period": "1H",
             "threshold_period": "24H",
             "threshold_type": "max",
-            "variable": (
-                lambda full_data:
-                round(-1 * full_data["bytes_remaining"].diff(5)
-                      / (TRIGGER_SIZE_MB * 1e6)).clip(lower=0)
-                / round((full_data["time"].diff(5)).dt.total_seconds() / 60)),
+            "variable": "trigger_rate_5min",
             },
         "plot_metadata": {
             "plot_title": "Trigger Rate",
@@ -444,9 +438,7 @@ STATUS_DASHBOARD_PLOTS = {
             "delta_period": "1H",
             "threshold_period": "24H",
             "threshold_type": "max",
-            "variable": (
-                lambda full_data:
-                full_data["bytes_remaining"] / (1e6 * TRIGGER_SIZE_MB)),
+            "variable": "triggers_remaining",
             },
         "plot_metadata": {
             "plot_title": "Triggers Remaining",
@@ -481,9 +473,9 @@ STATUS_DASHBOARD_PLOTS = {
         "plot_data": {
             "data_functions": (
                 lambda full_data, data_args:
-                full_data["crc_errors"].diff(1).clip(lower=0).last("1D").sum(),
+                full_data.loc[:, "crc_errors_daily"].iloc[-1],
                 lambda full_data, data_args:
-                full_data["crc_errors"].diff(1).clip(lower=0).last("1H").sum(),
+                full_data.loc[:, "crc_errors_hourly"].iloc[-1],
                 lambda full_data, data_args:
                 full_data["crc_errors"].last("24H").max(),
                 ),
@@ -550,7 +542,7 @@ def get_plot_data(plot_type=None, **kwargs):
 
     data_args = copy.deepcopy(STATUS_DATA_ARGS_DEFAULT)
     data_args.update(**kwargs)
-    full_data = sindri.process.load_status_data(latest_n=3)
+    full_data = sindri.process.ingest_status_data(n=3)
 
     plot_data = []
     if plot_type == "numeric":
@@ -599,7 +591,8 @@ def generate_status_data(status_dashboard_plots=STATUS_DASHBOARD_PLOTS,
             try:
                 plot_data = get_plot_data(
                     plot_type=plot["plot_type"], **plot["plot_data"])
-            except Exception:
+            except Exception as e:
+                print(str(type(e)), e)
                 plot_data = [SENTINEL_VALUE_JSON for __ in range(3)]
             status_data[plot_id] = plot_data
 

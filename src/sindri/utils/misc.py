@@ -13,6 +13,7 @@ import time
 
 PACKAGE_NAME = "Sindri"
 WEBSITE_UPDATE_FREQUENCY_S = 360
+TRIGGER_SIZE_MB = 22.0
 
 
 def time_ns():
