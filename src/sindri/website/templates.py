@@ -2,9 +2,6 @@
 Templates and other static data for constructing the Mjolnir status website.
 """
 
-# Standard library imports
-from pathlib import Path
-
 
 MAINPAGE_SENSOR_TEMPLATE = """
 _model: single-layout
@@ -113,9 +110,9 @@ if (fastUpdatePlots.length > 0) {{
     setInterval(fastUpdateStatus, {update_interval_fast_s} * 1000);
 }};
 
-var xmlhttp = new XMLHttpRequest()
-xmlhttp.onreadystatechange = function() {{
-    if (this.readyState == 4 && this.status == 200) {{
+var xhr = new XMLHttpRequest()
+xhr.onreadystatechange = function() {{
+    if (this.readyState == 4 && this.status < 300 && this.status >= 200) {{
         var statusData = JSON.parse(this.responseText);
         var currentUpdate = new Date(statusData.lastupdatetimestamp);
         if (lastUpdate == null || lastUpdate != currentUpdate) {{
@@ -134,8 +131,8 @@ xmlhttp.onreadystatechange = function() {{
 }};
 
 function updateStatus() {{
-    xmlhttp.open('GET', '{status_json_path}', true);
-    xmlhttp.send();
+    xhr.open("GET", "{status_json_path}", true);
+    xhr.send();
 }};
 
 updateStatus();
