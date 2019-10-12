@@ -6,7 +6,7 @@ Configuration for the plots and tables on the Mjolnir website.
 import datetime
 
 # Local imports
-from sindri.utils.misc import WEBSITE_UPDATE_FREQUENCY_S as UPDATE_FREQ
+from sindri.utils.misc import WEBSITE_UPDATE_INTERVAL_S as UPDATE_INT
 from sindri.website.templates import (
     GAUGE_PLOT_UPDATE_CODE,
     GAUGE_PLOT_UPDATE_CODE_VALUE,
@@ -26,18 +26,18 @@ STATUS_DASHBOARD_PLOTS = {
         "plot_params": {
             "gauge_value": 0,
             "plot_mode": "gauge+number+delta",
-            "delta_reference": UPDATE_FREQ,
+            "delta_reference": UPDATE_INT,
             "decreasing_color": "green",
             "increasing_color": "red",
-            "dtick": UPDATE_FREQ / 2,
-            "range": [0, UPDATE_FREQ * 2],
+            "dtick": UPDATE_INT / 2,
+            "range": [0, UPDATE_INT * 2],
             "tick0": 0,
             "steps": generate_step_string((
-                ([0, UPDATE_FREQ], "green"),
-                ([UPDATE_FREQ, UPDATE_FREQ + 60], "lime"),
-                ([UPDATE_FREQ + 60, UPDATE_FREQ + 2 * 60], "yellow"),
-                ([UPDATE_FREQ + 2 * 60, UPDATE_FREQ + 3 * 60], "orange"),
-                ([UPDATE_FREQ + 3 * 60, 32 * 24 * 60 * 60], "red"),
+                ([0, UPDATE_INT], "green"),
+                ([UPDATE_INT, UPDATE_INT + 60], "lime"),
+                ([UPDATE_INT + 60, UPDATE_INT + 2 * 60], "yellow"),
+                ([UPDATE_INT + 2 * 60, UPDATE_INT + 3 * 60], "orange"),
+                ([UPDATE_INT + 3 * 60, 32 * 24 * 60 * 60], "red"),
                 )),
             "threshold_thickness": 0.75,
             "threshold_value": 0,
