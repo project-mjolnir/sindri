@@ -15,6 +15,10 @@ from sindri.website.templates import (
 )
 
 
+STATUS_UPDATE_INTERVAL_SECONDS = 10
+STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
+
+
 STATUS_DASHBOARD_PLOTS = {
     "weblatency": {
         "plot_type": None,
@@ -480,3 +484,25 @@ STATUS_DASHBOARD_PLOTS = {
         "fast_update": False,
         },
     }
+
+
+STATUS_DASHBOARD_METADATA = {
+    "section_id": "status",
+    "section_title": "Status Dashboard",
+    "section_description": (
+        "Real-time status of this HAMMA sensor and the Mjolnir system."),
+    "section_nav_label": "Status",
+    }
+
+
+STATUS_DASHBOARD_ARGS = {
+    "dashboard_plots": STATUS_DASHBOARD_PLOTS,
+    "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
+    "update_interval_fast_seconds": (
+        STATUS_UPDATE_INTERVAL_FAST_SECONDS),
+    }
+
+
+MAINPAGE_BLOCKS = (
+    ("dashboard", STATUS_DASHBOARD_METADATA, STATUS_DASHBOARD_ARGS),
+)

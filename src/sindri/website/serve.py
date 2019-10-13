@@ -10,6 +10,7 @@ import sys
 import time
 
 # Local imports
+import sindri.config.website
 import sindri.utils.misc
 import sindri.website.generate
 
@@ -18,23 +19,21 @@ LEKTOR_SOURCE_DIR = "mjolnir-website"
 LEKTOR_SOURCE_PATH = Path(__file__).parent / LEKTOR_SOURCE_DIR
 LEKTOR_PROJECT_PATH = sindri.utils.misc.get_cache_dir() / LEKTOR_SOURCE_DIR
 
-MAINPAGE_PATH = Path("content") / "contents.lr"
-
 SOURCE_IGNORE_PATTERNS = (
     "temp", "*.tmp", "*.temp", "*.bak", "*.log", "*.orig", "example-site")
 
 
 def update_data(project_path=LEKTOR_PROJECT_PATH):
-    sindri.website.generate.generate_status_data(
-        write_dir=project_path / MAINPAGE_PATH.parent)
+    sindri.website.generate.generate_data(
+        mainpage_blocks=sindri.config.website.MAINPAGE_BLOCKS,
+        project_path=project_path)
 
 
 def update_project(project_path=LEKTOR_PROJECT_PATH):
     update_data(project_path=project_path)
-
-    with open(Path(project_path) / MAINPAGE_PATH, "w",
-              encoding="utf-8", newline="\n") as main_file:
-        main_file.write(sindri.website.generate.generate_mainfile_content())
+    sindri.website.generate.generate_content(
+        mainpage_blocks=sindri.config.website.MAINPAGE_BLOCKS,
+        project_path=project_path)
 
 
 def deploy_project(source_path=LEKTOR_SOURCE_PATH,

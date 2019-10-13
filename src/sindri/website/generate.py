@@ -13,20 +13,22 @@ import time
 import numpy as np
 
 # Local imports
-import sindri.config.website
 import sindri.process
 import sindri.utils.misc
 import sindri.website.templates
 
 
-STATUS_JSON_PATH = Path("status_data.json")
+CONTENT_ROOT_PATH = Path("content")
+MAINPAGE_PATH = Path("content") / "contents.lr"
+JSON_FILENAME = "{section_id}_data.json"
+
 SENTINEL_VALUE_JSON = -999
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
 
 
-STATUS_DATA_ARGS_DEFAULT = {
+DASHBOARD_DATA_ARGS_DEFAULT = {
     "data_functions": [
         lambda base_data, data_args: base_data.iloc[-1],
         lambda base_data, data_args: (
@@ -65,13 +67,19 @@ class CustomJSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def get_plot_data(plot_type=None, **kwargs):
+def write_data_json(output_data, path):
+    output_data["lastupdatetimestamp"] = int(time.time() * 1000)
+    with open(path, "w", encoding="utf-8", newline="\n") as jsonfile:
+        json.dump(output_data, jsonfile,
+                  separators=(",", ":"), cls=CustomJSONEncoder)
+
+
+def get_plot_data(full_data, plot_type, **kwargs):
     if not plot_type:
         return None
 
-    data_args = copy.deepcopy(STATUS_DATA_ARGS_DEFAULT)
+    data_args = copy.deepcopy(DASHBOARD_DATA_ARGS_DEFAULT)
     data_args.update(**kwargs)
-    full_data = sindri.process.ingest_status_data(n=3)
 
     plot_data = []
     if plot_type == "numeric":
@@ -111,40 +119,56 @@ def get_plot_data(plot_type=None, **kwargs):
     return plot_data
 
 
-def generate_status_data(
-        status_dashboard_plots=sindri.config.website.STATUS_DASHBOARD_PLOTS,
-        write_dir=None,
-        write_path=STATUS_JSON_PATH,
-        ):
-    status_data = {}
-    status_data["lastupdatetimestamp"] = int(time.time() * 1000)
-    for plot_id, plot in status_dashboard_plots.items():
+def generate_dashboard_data(
+        full_data, dashboard_plots, output_path=None):
+    dashboard_data = {}
+    for plot_id, plot in dashboard_plots.items():
         if plot["plot_type"]:
             try:
                 plot_data = get_plot_data(
-                    plot_type=plot["plot_type"], **plot["plot_data"])
+                    full_data,
+                    plot_type=plot["plot_type"],
+                    **plot["plot_data"],
+                    )
             except Exception as e:
                 print(str(type(e)), e)
                 plot_data = [SENTINEL_VALUE_JSON for __ in range(3)]
-            status_data[plot_id] = plot_data
+            dashboard_data[plot_id] = plot_data
 
-    if write_dir is not None and write_dir is not False and status_data:
-        with open(Path(write_dir) / write_path, "w",
-                  encoding="utf-8", newline="\n") as jsonfile:
-            json.dump(status_data, jsonfile,
-                      separators=(",", ":"), cls=CustomJSONEncoder)
-    return status_data
+    if dashboard_data and output_path:
+        write_data_json(output_data=dashboard_data, path=output_path)
+
+    return dashboard_data
+
+
+def generate_data(mainpage_blocks, project_path=None):
+    if project_path is None:
+        project_path = Path()
+
+    full_data = sindri.process.ingest_status_data(n=30)
+
+    for block_type, block_metadata, block_args in mainpage_blocks:
+        if block_type == "dashboard":
+            generate_dashboard_data(
+                full_data=full_data.last("26H"),
+                dashboard_plots=block_args["dashboard_plots"],
+                output_path=(
+                    Path(project_path) / CONTENT_ROOT_PATH
+                    / JSON_FILENAME.format(
+                        section_id=block_metadata["section_id"])),
+                )
 
 
 def generate_dashboard_block(
-        status_dashboard_plots=sindri.config.website.STATUS_DASHBOARD_PLOTS,
-        status_update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
-        status_update_interval_fast_seconds=STATUS_UPDATE_INTERVAL_FAST_SECONDS
+        block_metadata,
+        dashboard_plots,
+        update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
+        update_interval_fast_seconds=STATUS_UPDATE_INTERVAL_FAST_SECONDS,
         ):
     widget_blocks = []
     all_plots = []
     fast_update_plots = []
-    for plot_id, plot in status_dashboard_plots.items():
+    for plot_id, plot in dashboard_plots.items():
         widget_block = (sindri.website.templates.DASHBOARD_ITEM_TEMPLATE
                         .format(plot_id=plot_id, **plot["plot_metadata"]))
         widget_blocks.append(widget_block)
@@ -157,19 +181,37 @@ def generate_dashboard_block(
     update_script = sindri.website.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
         sentinel_value_json=SENTINEL_VALUE_JSON,
         all_plots="\n".join(all_plots),
-        status_json_path=STATUS_JSON_PATH,
-        update_interval_s=status_update_interval_seconds,
+        data_path=JSON_FILENAME.format(
+            section_id=block_metadata["section_id"]),
+        update_interval_s=update_interval_seconds,
         fast_update_plots=fast_update_plots,
-        update_interval_fast_s=status_update_interval_fast_seconds,
+        update_interval_fast_s=update_interval_fast_seconds,
         )
-    dashboard_section = (sindri.website.templates.DASHBOARD_SECTION_TEMPLATE
-                         .format(widgets=widgets, update_script=update_script))
-    return dashboard_section
+    dashboard_block = (sindri.website.templates.DASHBOARD_SECTION_TEMPLATE
+                       .format(widgets=widgets, update_script=update_script,
+                               **block_metadata))
+    return dashboard_block
 
 
-def generate_mainfile_content():
+def generate_mainfile_content(mainpage_blocks):
+    rendered_blocks = []
+    for block_type, block_metadata, block_args in mainpage_blocks:
+        if block_type == "dashboard":
+            rendered_block = generate_dashboard_block(
+                block_metadata=block_metadata, **block_args)
+        else:
+            raise ValueError("Block type must be one of {'dashboard'}")
+        rendered_blocks.append(rendered_block)
     mainfile_content = (sindri.website.templates.MAINPAGE_SENSOR_TEMPLATE
-                        .format(main_content="\n".join((
-                            generate_dashboard_block(),
-                            ))))
+                        .format(main_content="\n".join(rendered_blocks)))
     return mainfile_content
+
+
+def generate_content(mainpage_blocks, project_path=None):
+    if project_path is None:
+        project_path = Path()
+
+    mainfile_content = generate_mainfile_content(mainpage_blocks)
+    with open(Path(project_path) / MAINPAGE_PATH, "w",
+              encoding="utf-8", newline="\n") as main_file:
+        main_file.write(mainfile_content)

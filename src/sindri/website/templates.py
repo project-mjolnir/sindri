@@ -28,13 +28,13 @@ main_content:
 
 DASHBOARD_SECTION_TEMPLATE = """
 #### dashboard ####
-section_id: status
+section_id: {section_id}
 ----
-title: Status Dashboard
+title: {section_title}
 ----
-description: Current status of this HAMMA sensor and the Mjolnir system.
+description: {section_description}
 ----
-nav_label: Status
+nav_label: {section_nav_label}
 ----
 widgets:
 
@@ -131,7 +131,7 @@ xhr.onreadystatechange = function() {{
 }};
 
 function updateStatus() {{
-    xhr.open("GET", "{status_json_path}", true);
+    xhr.open("GET", "{data_path}", true);
     xhr.send();
 }};
 
