@@ -51,19 +51,19 @@ CALCULATED_COLUMNS = (
 
 
 def load_status_data(
-        n=None,
+        n_obs=None,
         lag=None,
         data_path=DATA_PATH_DEFAULT,
         glob_pattern=GLOB_PATTERN_DEFAULT,
         ):
     # Load
     files_to_load = Path(data_path).glob(glob_pattern)
-    if n is not None:
+    if n_obs is not None:
         if lag:
             files_to_load = sorted(
-                list(files_to_load))[(-1 * n - lag):(lag * -1)]
+                list(files_to_load))[(-1 * n_obs - lag):(lag * -1)]
         else:
-            files_to_load = sorted(list(files_to_load))[-1 * n:]
+            files_to_load = sorted(list(files_to_load))[-1 * n_obs:]
     status_data = pd.concat(
         (pd.read_csv(file) for file in files_to_load), ignore_index=True)
 
@@ -97,8 +97,8 @@ def preprocess_status_data(raw_status_data, decimate=None,
     return status_data
 
 
-def ingest_status_data(n=None, lag=0, decimate=None):
-    raw_status_data = load_status_data(n=n, lag=lag)
+def ingest_status_data(n_obs=None, lag=0, decimate=None):
+    raw_status_data = load_status_data(n_obs=n_obs, lag=lag)
     status_data = preprocess_status_data(raw_status_data, decimate=decimate)
     return status_data
 
@@ -131,4 +131,4 @@ def plot_status_data(
 
 
 if __name__ == "__main__":
-    plot_status_data(ingest_status_data(n=7))
+    plot_status_data(ingest_status_data(n_obs=7))

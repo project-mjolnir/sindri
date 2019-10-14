@@ -7,6 +7,7 @@ import copy
 import json
 import math
 from pathlib import Path
+import shutil
 import time
 
 # Third party imports
@@ -18,9 +19,11 @@ import sindri.utils.misc
 import sindri.website.templates
 
 
-CONTENT_ROOT_PATH = Path("content")
+CONTENT_PATH = Path("content")
+ASSET_PATH = Path("assets")
 MAINPAGE_PATH = Path("content") / "contents.lr"
-JSON_FILENAME = "{section_id}_data.json"
+DATA_FILENAME = "{section_id}_data"
+LOGFILE_NAME = "brokkr.log"
 
 SENTINEL_VALUE_JSON = -999
 
@@ -67,7 +70,9 @@ class CustomJSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def write_data_json(output_data, path):
+def write_data_json(path, output_data=None):
+    if output_data is None:
+        output_data = {}
     output_data["lastupdatetimestamp"] = int(time.time() * 1000)
     with open(path, "w", encoding="utf-8", newline="\n") as jsonfile:
         json.dump(output_data, jsonfile,
@@ -141,11 +146,55 @@ def generate_dashboard_data(
     return dashboard_data
 
 
+def generate_text_data(input_path, output_path=None, data_path=None,
+                       output_path_full=None, n_lines=None, project_path=None):
+    input_path = Path(input_path).expanduser()
+    if not project_path:
+        project_path = ""
+    if output_path is not None:
+        output_path = Path(project_path) / ASSET_PATH / output_path
+    if output_path_full is not None:
+        output_path_full = Path(project_path) / ASSET_PATH / output_path_full
+    if data_path is not None:
+        data_path = Path(project_path) / ASSET_PATH / data_path
+    if output_path is None:
+        output_path = output_path_full
+
+    if output_path is not None and output_path.exists():
+        if output_path.stat().st_mtime_ns > input_path.stat().st_mtime_ns:
+            if output_path_full is None or (
+                    output_path_full.stat().st_size
+                    == input_path.stat().st_size):
+                return None
+
+    if data_path is not None:
+        write_data_json(data_path, output_data=None)
+
+    if n_lines is None and output_path_full is None:
+        output_path_full = output_path
+    if output_path_full is not None:
+        shutil.copy(input_path, output_path_full)
+
+    if output_path is None or output_path != output_path_full:
+        with open(input_path, "r", encoding="utf8", newline="\n") as in_file:
+            text_content = in_file.read()
+        if n_lines is not None:
+            text_content = "\n".join(
+                text_content.split("\n")[(-1 * n_lines - 1):-1]) + "\n"
+        if output_path:
+            with open(output_path, "w",
+                      encoding="utf8", newline="\n") as out_file:
+                out_file.write(text_content)
+        return text_content
+
+    return None
+
+
 def generate_data(mainpage_blocks, project_path=None):
     if project_path is None:
         project_path = Path()
 
-    full_data = sindri.process.ingest_status_data(n=30)
+    full_data = sindri.process.ingest_status_data(n_obs=30)
 
     for block_type, block_metadata, block_args in mainpage_blocks:
         if block_type == "dashboard":
@@ -153,9 +202,16 @@ def generate_data(mainpage_blocks, project_path=None):
                 full_data=full_data.last("26H"),
                 dashboard_plots=block_args["dashboard_plots"],
                 output_path=(
-                    Path(project_path) / CONTENT_ROOT_PATH
-                    / JSON_FILENAME.format(
-                        section_id=block_metadata["section_id"])),
+                    Path(project_path) / ASSET_PATH
+                    / (DATA_FILENAME.format(
+                        section_id=block_metadata["section_id"]) + ".json")),
+                )
+        if block_type == "text":
+            generate_text_data(
+                project_path=project_path,
+                data_path=DATA_FILENAME.format(
+                    section_id=block_metadata["section_id"]) + ".json",
+                **block_args["data_args"],
                 )
 
 
@@ -180,17 +236,44 @@ def generate_dashboard_block(
     widgets = "\n".join(widget_blocks)
     update_script = sindri.website.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
         sentinel_value_json=SENTINEL_VALUE_JSON,
+        section_id=block_metadata["section_id"],
         all_plots="\n".join(all_plots),
-        data_path=JSON_FILENAME.format(
+        data_path=DATA_FILENAME.format(
             section_id=block_metadata["section_id"]),
-        update_interval_s=update_interval_seconds,
+        update_interval_seconds=update_interval_seconds,
         fast_update_plots=fast_update_plots,
-        update_interval_fast_s=update_interval_fast_seconds,
+        update_interval_fast_seconds=update_interval_fast_seconds,
         )
     dashboard_block = (sindri.website.templates.DASHBOARD_SECTION_TEMPLATE
                        .format(widgets=widgets, update_script=update_script,
                                **block_metadata))
     return dashboard_block
+
+
+def generate_text_block(block_metadata, data_args,
+                        replace_items="[]",
+                        update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
+                        ):
+    if data_args["output_path_full"] is None:
+        text_path_full = data_args["output_path"]
+    else:
+        text_path_full = data_args["output_path_full"]
+    if data_args["output_path"] is None:
+        text_path = data_args["output_path_full"]
+    else:
+        text_path = data_args["output_path"]
+
+    text_content = sindri.website.templates.TEXT_CONTENT_TEMPLATE.format(
+        section_id=block_metadata["section_id"],
+        replace_items=replace_items,
+        text_path=text_path,
+        data_path=DATA_FILENAME.format(
+            section_id=block_metadata["section_id"]),
+        update_interval_seconds=update_interval_seconds,
+        )
+    text_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
+        content=text_content, button_link=text_path_full, **block_metadata)
+    return text_block
 
 
 def generate_mainfile_content(mainpage_blocks):
@@ -199,8 +282,10 @@ def generate_mainfile_content(mainpage_blocks):
         if block_type == "dashboard":
             rendered_block = generate_dashboard_block(
                 block_metadata=block_metadata, **block_args)
+        elif block_type == "text":
+            rendered_block = generate_text_block(block_metadata, **block_args)
         else:
-            raise ValueError("Block type must be one of {'dashboard'}")
+            raise ValueError("Block type must be one of {'dashboard', 'text'}")
         rendered_blocks.append(rendered_block)
     mainfile_content = (sindri.website.templates.MAINPAGE_SENSOR_TEMPLATE
                         .format(main_content="\n".join(rendered_blocks)))

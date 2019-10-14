@@ -49,9 +49,9 @@ STATUS_DASHBOARD_PLOTS = {
             "number_suffix": " s",
             "plot_update_code": (
                 "data['value'] = (new Date() "
-                "- lastUpdate) / (1000);\n"
-                "if (data['value'] > maxLatency) {\n"
-                "    maxLatency = data['value'];\n"
+                "- lastUpdate_status) / (1000);\n"
+                "if (data['value'] > maxLatency_status) {\n"
+                "    maxLatency_status = data['value'];\n"
                 "    data['gauge.threshold.value'] = data['value'];\n"
                 "};\n"
                 + GAUGE_PLOT_UPDATE_CODE_COLOR
@@ -503,6 +503,45 @@ STATUS_DASHBOARD_ARGS = {
     }
 
 
+LOG_METADATA = {
+    "section_id": "log",
+    "section_title": "Client Log",
+    "section_description": (
+        "Latest log entries from this sensor's Brokkr client."),
+    "section_nav_label": "Log",
+    "button_content": "View Full Log",
+    "button_type": "text",
+    "button_position": "bottom",
+    "button_newtab": "false",
+    }
+
+
+LOG_DATA_ARGS = {
+    "input_path": "~/brokkr.log",
+    "output_path": "brokkr_log_latest.txt",
+    "output_path_full": "brokkr_log_full.txt",
+    "n_lines": 30,
+    }
+
+
+LOG_REPLACE_ITEMS = [
+    ["CRITICAL", "<span class='log-highlight critical'>CRITICAL</span>"],
+    ["ERROR", "<span class='log-highlight error'>ERROR</span>"],
+    ["WARNING", "<span class='log-highlight warning'>WARNING</span>"],
+    ["INFO", "<span class='log-highlight info'>INFO</span>"],
+    ["DEBUG", "<span class='log-highlight debug'>DEBUG</span>"],
+    ["\\|", "<span class='pipe-colored log-pipe'>|</span>"],
+    ]
+
+
+LOG_ARGS = {
+    "data_args": LOG_DATA_ARGS,
+    "replace_items": LOG_REPLACE_ITEMS,
+    "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
+    }
+
+
 MAINPAGE_BLOCKS = (
     ("dashboard", STATUS_DASHBOARD_METADATA, STATUS_DASHBOARD_ARGS),
-)
+    ("text", LOG_METADATA, LOG_ARGS),
+    )
