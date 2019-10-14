@@ -100,8 +100,8 @@ var fastUpdatePlots_{section_id} = {fast_update_plots};
 
 function fastUpdateStatus_{section_id}() {{
     if (fastUpdatePlots_{section_id}.length > 0 && lastUpdate_{section_id} != null) {{
-        for (plotid of fastUpdatePlots_{section_id}) {{
-            updatePlot(allPlots_{section_id}, plotid, null);
+        for (i = 0; i < fastUpdatePlots_{section_id}.length; i++) {{
+            updatePlot(allPlots_{section_id}, fastUpdatePlots_{section_id}[i], null);
         }};
     }};
 }};
@@ -122,7 +122,7 @@ xhr_{section_id}.onreadystatechange = function() {{
             }};
             lastUpdate_{section_id} = currentUpdate;
             Object.keys(allPlots_{section_id}).forEach(function(plotid) {{
-                if (! fastUpdatePlots_{section_id}.includes(plotid)) {{
+                if (fastUpdatePlots_{section_id}.indexOf(plotid) == -1) {{
                     updatePlot(allPlots_{section_id}, plotid, statusData);
                 }};
             }});
@@ -207,9 +207,10 @@ data["gauge.threshold.value"] = convertNaN(statusData[plotid][2]);
 
 GAUGE_PLOT_UPDATE_CODE_COLOR = """
 var foundStep = false;
-for (step of allPlots[plotid].data[0].gauge.steps) {
-    if (data["value"] >= step.range[0] && data["value"] <= step.range[1]) {
-        data["number.font.color"] = step.color;
+var allSteps = allPlots[plotid].data[0].gauge.steps;
+for (i = 0; i < allSteps.length; i++) {
+    if (data["value"] >= allSteps[i].range[0] && data["value"] <= allSteps[i].range[1]) {
+        data["number.font.color"] = allSteps[i].color;
         foundStep = true;
         break;
     };
@@ -265,9 +266,9 @@ xhrUpdate_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
         var outputText = this.responseText;
         outputText = outputText.replace(new RegExp("\\n", "g"), "\\n<br>\\n");
-        for (replaceItem of replaceItems) {{
-            var regexPattern = new RegExp(replaceItem[0], "g");
-            outputText = outputText.replace(regexPattern, replaceItem[1]);
+        for (i = 0; i < replaceItems.length; i++) {{
+            var regexPattern = new RegExp(replaceItems[i][0], "g");
+            outputText = outputText.replace(regexPattern, replaceItems[i][1]);
         }};
         var nodeToModify = document.getElementById("{section_id}-output");
         nodeToModify.innerHTML = outputText;
