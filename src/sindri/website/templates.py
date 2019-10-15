@@ -129,13 +129,13 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
         var lastUpdateData = JSON.parse(this.responseText);
         var currentCheck = new Date(lastUpdateData.lastCheck);
-        if (lastCheck_{section_id} == null || lastCheck_{section_id} != currentCheck) {{
+        if (lastCheck_{section_id} == null || lastCheck_{section_id}.getTime() != currentCheck.getTime()) {{
             lastCheck_{section_id} = new Date(lastUpdateData.lastCheck);
             fastUpdateStatus_{section_id}();
             var currentUpdate = new Date(lastUpdateData.lastUpdate);
-            if (lastUpdate_{section_id} == null || lastUpdate_{section_id} != currentUpdate) {{
+            if (lastUpdate_{section_id} == null || lastUpdate_{section_id}.getTime() != currentUpdate.getTime()) {{
                     lastUpdate_{section_id} = currentUpdate;
-                    xhrUpdate_{section_id}.open("GET", "{data_path}.json", true);
+                    xhrUpdate_{section_id}.open("GET", "{data_path}", true);
                     xhrUpdate_{section_id}.send();
             }};
         }};
@@ -143,7 +143,7 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
 }};
 
 function updateStatus_{section_id}() {{
-    xhrCheck_{section_id}.open("GET", "{lastupdate_path}.json", true);
+    xhrCheck_{section_id}.open("GET", "{lastupdate_path}", true);
     xhrCheck_{section_id}.send();
 }};
 
@@ -227,7 +227,7 @@ for (i = 0; i < allSteps.length; i++) {
         break;
     };
 };
-if (foundStep == false) {
+if (! foundStep) {
     data["number.font.color"] = "white";
 };
 
@@ -266,8 +266,8 @@ content:
 """
 
 TEXT_CONTENT_TEMPLATE = """
-<div id="{section_id}-container" class="text-content-container">
-  <code id="{section_id}-output" class="text-content-output"></code>
+<div id="{section_id}-container" class="content-container text-content-container">
+  <code id="{section_id}-output" class="content-output text-content-output"></code>
 </div>
 
 <script>
@@ -292,7 +292,7 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
         var lastUpdateData = JSON.parse(this.responseText);
         var currentUpdate = new Date(lastUpdateData.lastUpdate);
-        if (lastUpdate_{section_id} == null || lastUpdate_{section_id} != currentUpdate) {{
+        if (lastUpdate_{section_id} == null || lastUpdate_{section_id}.getTime() != currentUpdate.getTime()) {{
             lastUpdate_{section_id} = currentUpdate;
             xhrUpdate_{section_id}.open("GET", "{text_path}", true);
             xhrUpdate_{section_id}.send();
@@ -302,7 +302,7 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
 
 
 function updateStatus_{section_id}() {{
-    xhrCheck_{section_id}.open("GET", "{lastupdate_path}.json", true);
+    xhrCheck_{section_id}.open("GET", "{lastupdate_path}", true);
     xhrCheck_{section_id}.send();
 }};
 

@@ -495,8 +495,13 @@ STATUS_DASHBOARD_METADATA = {
     }
 
 
-STATUS_DASHBOARD_ARGS = {
+STATUS_DASHBOARD_DATA_ARGS = {
     "dashboard_plots": STATUS_DASHBOARD_PLOTS,
+}
+
+
+STATUS_DASHBOARD_ARGS = {
+    "data_args": STATUS_DASHBOARD_DATA_ARGS,
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
     "update_interval_fast_seconds": (
         STATUS_UPDATE_INTERVAL_FAST_SECONDS),

@@ -21,9 +21,9 @@ import sindri.website.templates
 
 CONTENT_PATH = Path("content")
 ASSET_PATH = Path("assets")
-MAINPAGE_PATH = Path("content") / "contents.lr"
-LASTUPDATE_FILENAME = "{section_id}_lastupdate"
-DATA_FILENAME = "{section_id}_data"
+MAINPAGE_PATH = CONTENT_PATH / "contents.lr"
+LASTUPDATE_FILENAME = "{section_id}_lastupdate.json"
+DATA_FILENAME = "{section_id}_data.json"
 LOGFILE_NAME = "brokkr.log"
 
 SENTINEL_VALUE_JSON = -999
@@ -158,23 +158,7 @@ def get_plot_data(full_data, plot_type, **kwargs):
     return plot_data
 
 
-def generate_dashboard_data(
-        full_data, dashboard_plots, input_path=None,
-        output_path=None, lastupdate_path=None, project_path=None):
-    if project_path:
-        project_path = Path(project_path) / ASSET_PATH
-    else:
-        project_path = Path(".")
-    if output_path is not None:
-        output_path = project_path / output_path
-    if lastupdate_path is not None:
-        lastupdate_path = project_path / lastupdate_path
-
-    if lastupdate_path is not None:
-        update_needed = check_update(input_path, lastupdate_path)
-        if not update_needed:
-            return None
-
+def generate_dashboard_data(full_data, dashboard_plots, output_path=None):
     dashboard_data = {}
     for plot_id, plot in dashboard_plots.items():
         if plot["plot_type"]:
@@ -191,30 +175,13 @@ def generate_dashboard_data(
 
     if dashboard_data and output_path:
         write_data_json(output_data=dashboard_data, path=output_path)
-
     return dashboard_data
 
 
-def generate_text_data(input_path, output_path=None, lastupdate_path=None,
-                       output_path_full=None, n_lines=None, project_path=None):
-    input_path = Path(input_path).expanduser()
-    if project_path:
-        project_path = Path(project_path) / ASSET_PATH
-    else:
-        project_path = Path(".")
-    if output_path is not None:
-        output_path = project_path / output_path
-    if output_path_full is not None:
-        output_path_full = project_path / output_path_full
-    if lastupdate_path is not None:
-        lastupdate_path = project_path / lastupdate_path
+def generate_text_data(
+        input_path, output_path=None, output_path_full=None, n_lines=None):
     if output_path is None:
         output_path = output_path_full
-
-    if lastupdate_path is not None:
-        update_needed = check_update(input_path, lastupdate_path)
-        if not update_needed:
-            return None
 
     if n_lines is None and output_path_full is None:
         output_path_full = output_path
@@ -237,43 +204,52 @@ def generate_text_data(input_path, output_path=None, lastupdate_path=None,
 
 
 def generate_data(mainpage_blocks, project_path=None):
-    if project_path is None:
+    if project_path:
+        project_path = Path(project_path) / ASSET_PATH
+    else:
         project_path = Path()
 
     full_data = sindri.process.ingest_status_data(n_days=31)
     data_input_path = sindri.process.get_status_data_paths(n_days=-1)[-1]
 
     for block_type, block_metadata, block_args in mainpage_blocks:
+        input_path = Path(block_args["data_args"]
+                          .get("input_path", data_input_path)).expanduser()
+        update_needed = check_update(
+            input_path,
+            project_path / (LASTUPDATE_FILENAME.format(
+                section_id=block_metadata["section_id"])),
+            )
+        if not update_needed:
+            continue
+
+        data_args = copy.deepcopy(block_args["data_args"])
+        if data_args.get("input_path", None) is not None:
+            data_args["input_path"] = input_path
+        if data_args.get("output_path", None) is None:
+            data_args["output_path"] = DATA_FILENAME.format(
+                section_id=block_metadata["section_id"])
+        for data_arg in ("output_path", "output_path_full"):
+            if data_args.get(data_arg, None) is not None:
+                data_args[data_arg] = project_path / data_args[data_arg]
+
         if block_type == "dashboard":
-            generate_dashboard_data(
-                full_data=full_data.last("27H"),
-                dashboard_plots=block_args["dashboard_plots"],
-                input_path=data_input_path,
-                output_path=DATA_FILENAME.format(
-                    section_id=block_metadata["section_id"]) + ".json",
-                lastupdate_path=LASTUPDATE_FILENAME.format(
-                    section_id=block_metadata["section_id"]) + ".json",
-                project_path=project_path,
-                )
+            generate_dashboard_data(full_data=full_data.last("27H"),
+                                    **data_args)
         if block_type == "text":
-            generate_text_data(
-                lastupdate_path=LASTUPDATE_FILENAME.format(
-                    section_id=block_metadata["section_id"]) + ".json",
-                project_path=project_path,
-                **block_args["data_args"],
-                )
+            generate_text_data(**data_args)
 
 
 def generate_dashboard_block(
         block_metadata,
-        dashboard_plots,
+        data_args,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         update_interval_fast_seconds=STATUS_UPDATE_INTERVAL_FAST_SECONDS,
         ):
     widget_blocks = []
     all_plots = []
     fast_update_plots = []
-    for plot_id, plot in dashboard_plots.items():
+    for plot_id, plot in data_args["dashboard_plots"].items():
         widget_block = (sindri.website.templates.DASHBOARD_ITEM_TEMPLATE
                         .format(plot_id=plot_id, **plot["plot_metadata"]))
         widget_blocks.append(widget_block)
