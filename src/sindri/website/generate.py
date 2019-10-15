@@ -22,6 +22,7 @@ import sindri.website.templates
 CONTENT_PATH = Path("content")
 ASSET_PATH = Path("assets")
 MAINPAGE_PATH = Path("content") / "contents.lr"
+LASTUPDATE_FILENAME = "{section_id}_lastupdate"
 DATA_FILENAME = "{section_id}_data"
 LOGFILE_NAME = "brokkr.log"
 
@@ -70,13 +71,46 @@ class CustomJSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def write_data_json(path, output_data=None):
-    if output_data is None:
-        output_data = {}
-    output_data["lastupdatetimestamp"] = int(time.time() * 1000)
+def write_data_json(output_data, path):
     with open(path, "w", encoding="utf-8", newline="\n") as jsonfile:
         json.dump(output_data, jsonfile,
                   separators=(",", ":"), cls=CustomJSONEncoder)
+
+
+def write_lastupdate_json(path=None, lastupdate=None,
+                          lastupdate_data=None, extra_data=None):
+    if extra_data:
+        output_data = extra_data
+    else:
+        output_data = {}
+
+    output_data["lastCheck"] = int(time.time() * 1000)
+    if lastupdate is None:
+        output_data["lastUpdate"] = int(time.time() * 1000)
+    else:
+        output_data["lastUpdate"] = lastupdate
+    if lastupdate_data is not None:
+        output_data["lastUpdateData"] = int(lastupdate_data)
+
+    if path:
+        write_data_json(output_data=output_data, path=path)
+    return output_data
+
+
+def check_update(input_path, lastupdate_path):
+    current_lastupdate = Path(input_path).stat().st_mtime_ns // 1000000
+    if Path(lastupdate_path).exists():
+        with open(lastupdate_path, "r",
+                  encoding="utf-8", newline="\n") as oldfile:
+            old_lastupdate = json.load(oldfile)
+        if old_lastupdate["lastUpdateData"] == current_lastupdate:
+            write_lastupdate_json(
+                lastupdate_path, lastupdate=old_lastupdate["lastUpdate"],
+                lastupdate_data=current_lastupdate)
+            return False
+    write_lastupdate_json(path=lastupdate_path,
+                          lastupdate_data=current_lastupdate)
+    return True
 
 
 def get_plot_data(full_data, plot_type, **kwargs):
@@ -125,7 +159,22 @@ def get_plot_data(full_data, plot_type, **kwargs):
 
 
 def generate_dashboard_data(
-        full_data, dashboard_plots, output_path=None):
+        full_data, dashboard_plots, input_path=None,
+        output_path=None, lastupdate_path=None, project_path=None):
+    if project_path:
+        project_path = Path(project_path) / ASSET_PATH
+    else:
+        project_path = Path(".")
+    if output_path is not None:
+        output_path = project_path / output_path
+    if lastupdate_path is not None:
+        lastupdate_path = project_path / lastupdate_path
+
+    if lastupdate_path is not None:
+        update_needed = check_update(input_path, lastupdate_path)
+        if not update_needed:
+            return None
+
     dashboard_data = {}
     for plot_id, plot in dashboard_plots.items():
         if plot["plot_type"]:
@@ -146,29 +195,26 @@ def generate_dashboard_data(
     return dashboard_data
 
 
-def generate_text_data(input_path, output_path=None, data_path=None,
+def generate_text_data(input_path, output_path=None, lastupdate_path=None,
                        output_path_full=None, n_lines=None, project_path=None):
     input_path = Path(input_path).expanduser()
-    if not project_path:
-        project_path = ""
+    if project_path:
+        project_path = Path(project_path) / ASSET_PATH
+    else:
+        project_path = Path(".")
     if output_path is not None:
-        output_path = Path(project_path) / ASSET_PATH / output_path
+        output_path = project_path / output_path
     if output_path_full is not None:
-        output_path_full = Path(project_path) / ASSET_PATH / output_path_full
-    if data_path is not None:
-        data_path = Path(project_path) / ASSET_PATH / data_path
+        output_path_full = project_path / output_path_full
+    if lastupdate_path is not None:
+        lastupdate_path = project_path / lastupdate_path
     if output_path is None:
         output_path = output_path_full
 
-    if output_path is not None and output_path.exists():
-        if output_path.stat().st_mtime_ns > input_path.stat().st_mtime_ns:
-            if output_path_full is None or (
-                    output_path_full.stat().st_size
-                    == input_path.stat().st_size):
-                return None
-
-    if data_path is not None:
-        write_data_json(data_path, output_data=None)
+    if lastupdate_path is not None:
+        update_needed = check_update(input_path, lastupdate_path)
+        if not update_needed:
+            return None
 
     if n_lines is None and output_path_full is None:
         output_path_full = output_path
@@ -194,23 +240,26 @@ def generate_data(mainpage_blocks, project_path=None):
     if project_path is None:
         project_path = Path()
 
-    full_data = sindri.process.ingest_status_data(n_obs=30)
+    full_data = sindri.process.ingest_status_data(n_days=31)
+    data_input_path = sindri.process.get_status_data_paths(n_days=-1)[-1]
 
     for block_type, block_metadata, block_args in mainpage_blocks:
         if block_type == "dashboard":
             generate_dashboard_data(
-                full_data=full_data.last("26H"),
+                full_data=full_data.last("27H"),
                 dashboard_plots=block_args["dashboard_plots"],
-                output_path=(
-                    Path(project_path) / ASSET_PATH
-                    / (DATA_FILENAME.format(
-                        section_id=block_metadata["section_id"]) + ".json")),
+                input_path=data_input_path,
+                output_path=DATA_FILENAME.format(
+                    section_id=block_metadata["section_id"]) + ".json",
+                lastupdate_path=LASTUPDATE_FILENAME.format(
+                    section_id=block_metadata["section_id"]) + ".json",
+                project_path=project_path,
                 )
         if block_type == "text":
             generate_text_data(
-                project_path=project_path,
-                data_path=DATA_FILENAME.format(
+                lastupdate_path=LASTUPDATE_FILENAME.format(
                     section_id=block_metadata["section_id"]) + ".json",
+                project_path=project_path,
                 **block_args["data_args"],
                 )
 
@@ -240,6 +289,8 @@ def generate_dashboard_block(
         all_plots="\n".join(all_plots),
         data_path=DATA_FILENAME.format(
             section_id=block_metadata["section_id"]),
+        lastupdate_path=LASTUPDATE_FILENAME.format(
+            section_id=block_metadata["section_id"]),
         update_interval_seconds=update_interval_seconds,
         fast_update_plots=fast_update_plots,
         update_interval_fast_seconds=update_interval_fast_seconds,
@@ -267,7 +318,7 @@ def generate_text_block(block_metadata, data_args,
         section_id=block_metadata["section_id"],
         replace_items=replace_items,
         text_path=text_path,
-        data_path=DATA_FILENAME.format(
+        lastupdate_path=LASTUPDATE_FILENAME.format(
             section_id=block_metadata["section_id"]),
         update_interval_seconds=update_interval_seconds,
         )

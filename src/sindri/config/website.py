@@ -49,7 +49,7 @@ STATUS_DASHBOARD_PLOTS = {
             "number_suffix": " s",
             "plot_update_code": (
                 "data['value'] = (new Date() "
-                "- lastUpdate_status) / (1000);\n"
+                "- lastCheck_status) / (1000);\n"
                 "if (data['value'] > maxLatency_status) {\n"
                 "    maxLatency_status = data['value'];\n"
                 "    data['gauge.threshold.value'] = data['value'];\n"

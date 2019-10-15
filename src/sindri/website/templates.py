@@ -78,6 +78,7 @@ var config = {{
     displayModeBar: false,
 }};
 
+var lastCheck_{section_id} = null;
 var lastUpdate_{section_id} = null;
 var maxLatency_{section_id} = 0;
 
@@ -99,7 +100,7 @@ function updatePlot(allPlots, plotid, statusData) {{
 var fastUpdatePlots_{section_id} = {fast_update_plots};
 
 function fastUpdateStatus_{section_id}() {{
-    if (fastUpdatePlots_{section_id}.length > 0 && lastUpdate_{section_id} != null) {{
+    if (fastUpdatePlots_{section_id}.length > 0 && lastCheck_{section_id} != null) {{
         for (i = 0; i < fastUpdatePlots_{section_id}.length; i++) {{
             updatePlot(allPlots_{section_id}, fastUpdatePlots_{section_id}[i], null);
         }};
@@ -110,29 +111,40 @@ if (fastUpdatePlots_{section_id}.length > 0) {{
     setInterval(fastUpdateStatus_{section_id}, {update_interval_fast_seconds} * 1000);
 }};
 
-var xhr_{section_id} = new XMLHttpRequest();
-xhr_{section_id}.onreadystatechange = function() {{
+
+var xhrUpdate_{section_id} = new XMLHttpRequest();
+xhrUpdate_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
         var statusData = JSON.parse(this.responseText);
-        var currentUpdate = new Date(statusData.lastupdatetimestamp);
-        if (lastUpdate_{section_id} == null || lastUpdate_{section_id} != currentUpdate) {{
-            if (lastUpdate_{section_id} == null) {{
-                lastUpdate_{section_id} = currentUpdate;
-                fastUpdateStatus_{section_id}();
+        Object.keys(allPlots_{section_id}).forEach(function(plotid) {{
+            if (fastUpdatePlots_{section_id}.indexOf(plotid) == -1) {{
+                updatePlot(allPlots_{section_id}, plotid, statusData);
             }};
-            lastUpdate_{section_id} = currentUpdate;
-            Object.keys(allPlots_{section_id}).forEach(function(plotid) {{
-                if (fastUpdatePlots_{section_id}.indexOf(plotid) == -1) {{
-                    updatePlot(allPlots_{section_id}, plotid, statusData);
-                }};
-            }});
+        }});
+    }};
+}};
+
+var xhrCheck_{section_id} = new XMLHttpRequest();
+xhrCheck_{section_id}.onreadystatechange = function() {{
+    if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
+        var lastUpdateData = JSON.parse(this.responseText);
+        var currentCheck = new Date(lastUpdateData.lastCheck);
+        if (lastCheck_{section_id} == null || lastCheck_{section_id} != currentCheck) {{
+            lastCheck_{section_id} = new Date(lastUpdateData.lastCheck);
+            fastUpdateStatus_{section_id}();
+            var currentUpdate = new Date(lastUpdateData.lastUpdate);
+            if (lastUpdate_{section_id} == null || lastUpdate_{section_id} != currentUpdate) {{
+                    lastUpdate_{section_id} = currentUpdate;
+                    xhrUpdate_{section_id}.open("GET", "{data_path}.json", true);
+                    xhrUpdate_{section_id}.send();
+            }};
         }};
     }};
 }};
 
 function updateStatus_{section_id}() {{
-    xhr_{section_id}.open("GET", "{data_path}.json", true);
-    xhr_{section_id}.send();
+    xhrCheck_{section_id}.open("GET", "{lastupdate_path}.json", true);
+    xhrCheck_{section_id}.send();
 }};
 
 updateStatus_{section_id}();
@@ -278,8 +290,8 @@ xhrUpdate_{section_id}.onreadystatechange = function() {{
 var xhrCheck_{section_id} = new XMLHttpRequest();
 xhrCheck_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
-        var statusData = JSON.parse(this.responseText);
-        var currentUpdate = new Date(statusData.lastupdatetimestamp);
+        var lastUpdateData = JSON.parse(this.responseText);
+        var currentUpdate = new Date(lastUpdateData.lastUpdate);
         if (lastUpdate_{section_id} == null || lastUpdate_{section_id} != currentUpdate) {{
             lastUpdate_{section_id} = currentUpdate;
             xhrUpdate_{section_id}.open("GET", "{text_path}", true);
@@ -290,7 +302,7 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
 
 
 function updateStatus_{section_id}() {{
-    xhrCheck_{section_id}.open("GET", "{data_path}.json", true);
+    xhrCheck_{section_id}.open("GET", "{lastupdate_path}.json", true);
     xhrCheck_{section_id}.send();
 }};
 

@@ -13,7 +13,7 @@ import pandas as pd
 import sindri.utils.misc
 
 
-DATA_PATH_DEFAULT = Path.home() / "data" / "monitoring"
+DATA_DIR_DEFAULT = Path.home() / "data" / "monitoring"
 GLOB_PATTERN_DEFAULT = "hamma*_????-??-??.csv"
 
 FIGSIZE_DEFAULT = (8, 24)
@@ -50,23 +50,24 @@ CALCULATED_COLUMNS = (
     )
 
 
-def load_status_data(
-        n_obs=None,
-        lag=None,
-        data_path=DATA_PATH_DEFAULT,
-        glob_pattern=GLOB_PATTERN_DEFAULT,
-        ):
-    # Load
-    files_to_load = Path(data_path).glob(glob_pattern)
-    if n_obs is not None:
+def get_status_data_paths(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
+                          glob_pattern=GLOB_PATTERN_DEFAULT):
+    files_to_load = Path(data_dir).glob(glob_pattern)
+    if n_days is not None:
         if lag:
             files_to_load = sorted(
-                list(files_to_load))[(-1 * n_obs - lag):(lag * -1)]
+                list(files_to_load))[(-1 * n_days - lag):(lag * -1)]
         else:
-            files_to_load = sorted(list(files_to_load))[-1 * n_obs:]
-    status_data = pd.concat(
-        (pd.read_csv(file) for file in files_to_load), ignore_index=True)
+            files_to_load = sorted(list(files_to_load))[-1 * n_days:]
+    return files_to_load
 
+
+def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
+                     glob_pattern=GLOB_PATTERN_DEFAULT):
+    files_to_load = get_status_data_paths(
+        n_days=n_days, lag=lag, data_dir=data_dir, glob_pattern=glob_pattern)
+    status_data = pd.concat(
+        [pd.read_csv(file) for file in files_to_load], ignore_index=True)
     return status_data
 
 
@@ -82,7 +83,6 @@ def calculate_columns(df, column_specs=CALCULATED_COLUMNS):
 
 def preprocess_status_data(raw_status_data, decimate=None,
                            column_specs=CALCULATED_COLUMNS):
-    # Convert values
     if decimate:
         status_data = raw_status_data.iloc[::decimate, :]
     else:
@@ -97,8 +97,8 @@ def preprocess_status_data(raw_status_data, decimate=None,
     return status_data
 
 
-def ingest_status_data(n_obs=None, lag=0, decimate=None):
-    raw_status_data = load_status_data(n_obs=n_obs, lag=lag)
+def ingest_status_data(n_days=None, lag=0, decimate=None):
+    raw_status_data = load_status_data(n_days=n_days, lag=lag)
     status_data = preprocess_status_data(raw_status_data, decimate=decimate)
     return status_data
 
@@ -131,4 +131,4 @@ def plot_status_data(
 
 
 if __name__ == "__main__":
-    plot_status_data(ingest_status_data(n_obs=7))
+    plot_status_data(ingest_status_data(n_days=7))
