@@ -22,7 +22,7 @@ theme_bg_alt_color = #32414b
 theme_bg_accent_color = #333333
 theme_accent_color = #fda801
 theme_pipe_color = #ffd249
-custom_css =
+custom_css = /static/css/custom-styles.css
 custom_js_main =
 custom_js_singlepage =
 custom_head_content = <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>

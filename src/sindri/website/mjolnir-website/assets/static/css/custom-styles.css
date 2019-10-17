@@ -1,0 +1,40 @@
+@charset "UTF-8";
+
+/* Custom styles for the HAMMA Mjolnir website */
+
+
+/* Verbatim text content container */
+
+.text-content-container {
+  background-color: #001830;
+  border: 2px solid #808080;
+  border-radius: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+code.text-content-output {
+  background-color: transparent;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 0;
+  display: block;
+}
+
+span.critical {
+  color: red;
+}
+span.error {
+  color: orange;
+}
+span.warning {
+  color: yellow;
+}
+span.info {
+  color: cyan;
+}
+span.debug {
+  color: green;
+}
