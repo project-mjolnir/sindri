@@ -4,8 +4,10 @@ Data, plots and calculations for the HAMMA Mjolnir status website.
 
 # Standard library imports
 import copy
+import datetime
 import json
 import math
+import os
 from pathlib import Path
 import shutil
 import time
@@ -21,7 +23,13 @@ import sindri.website.templates
 
 CONTENT_PATH = Path("content")
 ASSET_PATH = Path("assets")
+THEME_PATH = Path("themes")
+DATABAG_PATH = Path("databags")
+
 MAINPAGE_PATH = CONTENT_PATH / "contents.lr"
+BUILDINFO_DATABAG_PATH = DATABAG_PATH / "buildinfo.json"
+LEKTOR_ICON_VERSION_PATH = THEME_PATH / "lektor-icon" / "_version.txt"
+
 LASTUPDATE_FILENAME = "{section_id}_lastupdate.json"
 DATA_FILENAME = "{section_id}_data.json"
 LOGFILE_NAME = "brokkr.log"
@@ -319,11 +327,81 @@ def generate_mainfile_content(mainpage_blocks):
     return mainfile_content
 
 
-def generate_content(mainpage_blocks, project_path=None):
+def generate_build_info(project_path=None):
     if project_path is None:
         project_path = Path()
 
+    build_time = datetime.datetime.utcnow()
+    sindri_version = sindri.__version__
+
+    lektor_version = "NULL"
+    imported_pkg_resources = False
+    try:
+        import pkg_resources
+        imported_pkg_resources = True
+    except Exception:
+        try:
+            import pip._vendor.pkg_resources as pkg_resources
+            imported_pkg_resources = True
+        except Exception as e:
+            print("Error importing pkg_resources to get version string: "
+                  f"{type(e)} : {e}")
+
+    try:
+        for package in pkg_resources.working_set:
+            if package.project_name.lower() == "lektor":
+                lektor_version = package.version
+                break
+    except Exception as e:
+        if imported_pkg_resources:
+            print("Error getting Lektor version from pkg_resources: "
+                  f"{type(e)} : {e}")
+
+    try:
+        with open(Path(project_path) / LEKTOR_ICON_VERSION_PATH, "r",
+                  encoding="utf-8") as lektor_icon_version_file:
+            lektor_icon_version = lektor_icon_version_file.read()
+    except Exception as e:
+        print("Error getting Lektor-Icon version string: "
+              f"{type(e)} : {e}")
+        lektor_icon_version = "NULL"
+
+    version_string_template = (
+        "<a href='{pkg_link}' target='_blank' rel='noopener noreferrer'>"
+        "{pkg_name}</a>&nbsp;{pkg_version}"
+        )
+
+    time_string = f"Site Build Timestamp: {build_time} UTC"
+    version_strings = tuple(
+        version_string_template.format(
+            pkg_name=pkg_name.replace("-", "&#8209;"),
+            pkg_version=pkg_version, pkg_link=pkg_link)
+        for pkg_name, pkg_version, pkg_link in (
+            ("Sindri", sindri_version, "https://github.com/hamma-dev/sindri"),
+            ("Lektor", lektor_version, "https://www.getlektor.com/"),
+            ("Lektor-Icon", lektor_icon_version,
+             "https://spyder-ide.github.io/lektor-icon/"),
+            ))
+
+    version_string_combined = " <span class='pipe-colored'>|</span> ".join(
+        version_strings)
+    build_info_string = "<br>".join((version_string_combined, time_string))
+    build_info = {"buildinfo": build_info_string}
+
+    return build_info
+
+
+def generate_content(mainpage_blocks, project_path=None):
+    if project_path is None:
+        project_path = Path()
+    else:
+        project_path = Path(project_path)
+
+    build_info = generate_build_info(project_path=project_path)
+    os.makedirs((project_path / BUILDINFO_DATABAG_PATH).parent, exist_ok=True)
+    write_data_json(build_info, project_path / BUILDINFO_DATABAG_PATH)
+
     mainfile_content = generate_mainfile_content(mainpage_blocks)
-    with open(Path(project_path) / MAINPAGE_PATH, "w",
+    with open(project_path / MAINPAGE_PATH, "w",
               encoding="utf-8", newline="\n") as main_file:
         main_file.write(mainfile_content)
