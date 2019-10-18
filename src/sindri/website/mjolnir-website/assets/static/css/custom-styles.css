@@ -3,6 +3,127 @@
 /* Custom styles for the HAMMA Mjolnir website */
 
 
+/* Table styles and color */
+
+.table-content-output table {
+  font-size: 0.8em;
+  line-height: 1.5em;
+  width: 100%;
+}
+
+.table-content-output thead {
+  line-height: 2em;
+}
+
+.table-content-output tbody {
+  color: #ffffff;
+  text-align: right;
+}
+
+.table-content-output tbody td,
+.table-content-output tbody th {
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}
+
+
+@media screen and (max-width: 599px) {
+  .content-section .center {
+    width: 90%;
+  }
+}
+
+@media screen and (max-width: 479px) {
+  .content-section .center {
+    width: 100%;
+  }
+  .table-content-output table {
+    font-size: 0.75em;
+  }
+  .table-content-output tbody td,
+  .table-content-output tbody th {
+    padding-left: 0.4em;
+    padding-right: 0.4em;
+  }
+}
+
+@media screen and (max-width: 359px) {
+  .table-content-output table {
+    font-size: 0.7em;
+  }
+  .table-content-output tbody td,
+  .table-content-output tbody th {
+    padding-left: 0.3em;
+    padding-right: 0.3em;
+  }
+}
+  
+.table-content-output tbody th {
+  padding-left: 0.2em;
+  width: 5%
+}
+
+.light-bg-section .table-content-output th {
+  background-color: #e8ecf1;
+  background-color: var(--theme-bg-alt-color, #e8ecf1);
+}
+.dark-bg-section .table-content-output th {
+  background-color: #ffffff;
+  background-color: var(--theme-bg-color, #ffffff);
+}
+
+.table-cell-nocolor {
+  background-color: darkslategray;
+}
+.table-cell-null {
+  background-color: maroon;
+}
+
+.table-cell-red {
+  background-color: red;
+}
+.table-cell-maroon {
+  background-color: maroon;
+}
+.table-cell-orange {
+  background-color: darkorange;
+}
+.table-cell-yellow {
+  background-color: goldenrod;
+}
+.table-cell-lime {
+  background-color: forestgreen;
+}
+.table-cell-green {
+  background-color: darkgreen;
+}
+.table-cell-teal {
+  background-color: teal;
+}
+.table-cell-blue {
+  background-color: navy;
+}
+.table-cell-gray {
+  background-color: gray;
+}
+
+
+
+tbody tr td,
+tobdy tr th {
+  transition: 0.2s;
+}
+
+tbody tr:hover td,
+tbody tr:hover th,
+tbody tr:focus td,
+tbody tr:focus th,
+tbody tr:active td,
+tbody tr:active th {
+  background-color: #333333 !important;
+}
+
+
 /* Verbatim text content container */
 
 .text-content-container {

@@ -14,6 +14,7 @@ import time
 
 # Third party imports
 import numpy as np
+import pandas as pd
 
 # Local imports
 import sindri.process
@@ -162,7 +163,6 @@ def get_plot_data(full_data, plot_type, **kwargs):
                       for data_function, overlay_function
                       in zip(data_args["data_functions"],
                              data_args["overlay_functions"]))
-
     return plot_data
 
 
@@ -184,6 +184,36 @@ def generate_dashboard_data(full_data, dashboard_plots, output_path=None):
     if dashboard_data and output_path:
         write_data_json(output_data=dashboard_data, path=output_path)
     return dashboard_data
+
+
+def generate_table_data(full_data, output_cols,
+                        time_period=None, drop_cols=None, col_conversions=None,
+                        sort_rows=False, reset_index=True, final_colnames=None,
+                        output_args=None, output_path=None):
+    if time_period:
+        full_data = full_data.last(time_period)
+    full_data = full_data.copy()
+    if drop_cols:
+        full_data = full_data.drop(list(drop_cols), axis=1)
+
+    if col_conversions:
+        for var_name, (factor, n_digits) in col_conversions.items():
+            full_data[var_name] = round(full_data[var_name] * factor, n_digits)
+
+    table_data = pd.concat(tuple(col_fn(full_data) for col_fn in output_cols),
+                           axis=1, sort=sort_rows)
+
+    if reset_index:
+        table_data.reset_index(inplace=True)
+    if final_colnames:
+        table_data.columns = list(final_colnames)
+
+    if output_path:
+        if output_args is None:
+            output_args = {}
+        table_data.to_json(
+            output_path, orient="records", lines=False, **output_args)
+    return table_data
 
 
 def generate_text_data(
@@ -244,13 +274,45 @@ def generate_data(mainpage_blocks, project_path=None):
         if block_type == "dashboard":
             generate_dashboard_data(full_data=full_data.last("27H"),
                                     **data_args)
+        if block_type == "table":
+            generate_table_data(full_data=full_data, **data_args)
         if block_type == "text":
             generate_text_data(**data_args)
+
+
+def generate_step_string(color_domain, color_range):
+    if len(color_domain) != (len(color_range) - 1):
+        raise ValueError("Color domain and range lengths do not align "
+                         f"(are {len(color_domain)} and {len(color_range)}).")
+    color_domain = [-1e9] + color_domain + [1e9]
+    step_string = "".join((
+        sindri.website.templates.GAUGE_PLOT_STEPS_TEMPLATE.format(
+            begin=begin, end=end, color=color)
+        for begin, end, color in
+        zip(color_domain[:-1], color_domain[1:], color_range)))
+    return step_string
+
+
+def generate_steps(plot, color_map=None):
+    steps = plot["plot_params"].get("steps", None)
+    if steps is False:
+        return ""
+    if steps is None:
+        if color_map is None:
+            return ""
+        plot_variable = plot["plot_data"].get("variable", None)
+        if plot_variable is None:
+            return ""
+        steps = color_map.get(plot_variable, None)
+        if steps is None:
+            return ""
+    return generate_step_string(*steps)
 
 
 def generate_dashboard_block(
         block_metadata,
         data_args,
+        color_map=None,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         update_interval_fast_seconds=STATUS_UPDATE_INTERVAL_FAST_SECONDS,
         ):
@@ -258,6 +320,7 @@ def generate_dashboard_block(
     all_plots = []
     fast_update_plots = []
     for plot_id, plot in data_args["dashboard_plots"].items():
+        plot["plot_params"]["steps"] = generate_steps(plot, color_map)
         widget_block = (sindri.website.templates.DASHBOARD_ITEM_TEMPLATE
                         .format(plot_id=plot_id, **plot["plot_metadata"]))
         widget_blocks.append(widget_block)
@@ -285,10 +348,30 @@ def generate_dashboard_block(
     return dashboard_block
 
 
-def generate_text_block(block_metadata, data_args,
-                        replace_items="[]",
-                        update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
-                        ):
+def generate_table_block(
+        block_metadata, data_args, color_map,
+        update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS):
+    table_content = sindri.website.templates.TABLE_CONTENT_TEMPLATE.format(
+        section_id=block_metadata["section_id"],
+        color_map=color_map,
+        final_colnames=list(data_args["final_colnames"]),
+        data_path=DATA_FILENAME.format(
+            section_id=block_metadata["section_id"]),
+        lastupdate_path=LASTUPDATE_FILENAME.format(
+            section_id=block_metadata["section_id"]),
+        update_interval_seconds=update_interval_seconds,
+        )
+    table_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
+        content=table_content, **block_metadata)
+    return table_block
+
+
+def generate_text_block(
+        block_metadata,
+        data_args,
+        replace_items="[]",
+        update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
+        ):
     if data_args["output_path_full"] is None:
         text_path_full = data_args["output_path"]
     else:
@@ -317,10 +400,13 @@ def generate_mainfile_content(mainpage_blocks):
         if block_type == "dashboard":
             rendered_block = generate_dashboard_block(
                 block_metadata=block_metadata, **block_args)
+        elif block_type == "table":
+            rendered_block = generate_table_block(block_metadata, **block_args)
         elif block_type == "text":
             rendered_block = generate_text_block(block_metadata, **block_args)
         else:
-            raise ValueError("Block type must be one of {'dashboard', 'text'}")
+            raise ValueError("Block type must be one of "
+                             "{'dashboard', 'table', 'text'}")
         rendered_blocks.append(rendered_block)
     mainfile_content = (sindri.website.templates.MAINPAGE_SENSOR_TEMPLATE
                         .format(main_content="\n".join(rendered_blocks)))

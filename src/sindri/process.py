@@ -21,32 +21,32 @@ FIGSIZE_DEFAULT = (8, 24)
 CALCULATED_COLUMNS = (
     ("power_load", "power_out",
      lambda full_data: full_data["adc_vl_f"] * full_data["adc_il_f"]),
-    ("trigger_delta", None,
+    ("sensor_uptime", "vb_max",
+     lambda full_data: full_data["sequence_count"] / (60 * 60)),
+    ("crc_errors_delta", "crc_errors",
+     lambda full_data: full_data["crc_errors"].diff(1).clip(lower=0)),
+    ("crc_errors_hourly", "crc_errors_delta",
+     lambda full_data: full_data["crc_errors_delta"].last("1H").sum()),
+    ("crc_errors_daily", "crc_errors_hourly",
+     lambda full_data: full_data["crc_errors_delta"].last("24H").sum()),
+    ("trigger_delta", "valid_packets",
      (lambda full_data: round(
          -1 * full_data["bytes_remaining"].diff(1)
          / (sindri.utils.misc.TRIGGER_SIZE_MB * 1e6)).clip(lower=0))),
-    ("trigger_rate_1min", None,
+    ("trigger_rate_1min", "trigger_delta",
      lambda full_data: full_data["trigger_delta"]
      / round(full_data["time"].diff(1).dt.total_seconds() / 60)),
-    ("trigger_rate_5min", None,
+    ("trigger_rate_5min", "trigger_rate_1min",
      lambda full_data:
      full_data["trigger_delta"].rolling(5, min_periods=1).mean()
      / round(full_data["time"].diff(5).dt.total_seconds() / (60 * 5))),
-    ("trigger_rate_1hr", None,
+    ("trigger_rate_1hr", "trigger_rate_5min",
      lambda full_data:
      full_data["trigger_delta"].rolling(60, min_periods=1).mean()
      / round(full_data["time"].diff(60).dt.total_seconds() / (60 * 60))),
-    ("triggers_remaining", None,
+    ("triggers_remaining", "bytes_remaining",
      lambda full_data: round(full_data["bytes_remaining"]
                              / (1e6 * sindri.utils.misc.TRIGGER_SIZE_MB))),
-    ("crc_errors_delta", None,
-     lambda full_data: full_data["crc_errors"].diff(1).clip(lower=0)),
-    ("crc_errors_hourly", None,
-     lambda full_data: full_data["crc_errors_delta"].last("1H").sum()),
-    ("crc_errors_daily", None,
-     lambda full_data: full_data["crc_errors_delta"].last("24H").sum()),
-    ("sensor_uptime", None,
-     lambda full_data: full_data["sequence_count"] / (60 * 60)),
     )
 
 
@@ -67,7 +67,8 @@ def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
     files_to_load = get_status_data_paths(
         n_days=n_days, lag=lag, data_dir=data_dir, glob_pattern=glob_pattern)
     status_data = pd.concat(
-        [pd.read_csv(file) for file in files_to_load], ignore_index=True)
+        [pd.read_csv(file) for file in files_to_load],
+        ignore_index=True, sort=False)
     return status_data
 
 

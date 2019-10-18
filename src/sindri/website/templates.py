@@ -236,7 +236,7 @@ if (! foundStep) {
 GAUGE_PLOT_UPDATE_CODE = (GAUGE_PLOT_UPDATE_CODE_VALUE
                           + GAUGE_PLOT_UPDATE_CODE_COLOR)
 
-GAUGE_PLOT_STEPS_TEMPLATE = "{{ range: {step_range}, color: '{color}' }}, "
+GAUGE_PLOT_STEPS_TEMPLATE = "{{ range: [{begin}, {end}], color: '{color}' }}, "
 
 
 CONTENT_SECTION_TEMPLATE = """
@@ -264,6 +264,94 @@ content:
 {content}
 
 """
+
+
+TABLE_CONTENT_TEMPLATE = """
+<div id="{section_id}-container" class="content-container table-content-container">
+  <div id="{section_id}-output" class="content-output table-content-output"></div>
+</div>
+
+<script>
+var colorMap_{section_id} = {color_map};
+
+function getColor_{section_id}(dataValue) {{
+    if (dataValue.row == dataValue.value) {{
+        return "table-cell-header";
+    }};
+    if (dataValue.value == null) {{
+        return "table-cell-null";
+    }};
+    if (! colorMap_{section_id}.hasOwnProperty(dataValue.row)) {{
+        return "table-cell-nocolor";
+    }};
+    var colorScale = Plotly.d3.scale.threshold()
+    .domain(colorMap_{section_id}[dataValue.row][0])
+    .range(colorMap_{section_id}[dataValue.row][1]);
+    return "table-cell-".concat(colorScale(dataValue.value));
+}};
+
+var lastUpdate_{section_id} = null;
+var columns_{section_id} = {final_colnames};
+
+var dataTable_{section_id} = Plotly.d3.select("#{section_id}-output").append("table");
+var tableHeader_{section_id} = dataTable_{section_id}.append("thead");
+var tableBody_{section_id} = dataTable_{section_id}.append("tbody");
+
+function createTableElement(dataValue) {{
+    if (dataValue.row == dataValue.value) {{
+        return document.createElement("th");
+    }};
+    return document.createElement("td");
+}};
+
+var xhrCheck_{section_id} = new XMLHttpRequest();
+xhrCheck_{section_id}.onreadystatechange = function() {{
+    if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
+        var lastUpdateData = JSON.parse(this.responseText);
+        var currentUpdate = new Date(lastUpdateData.lastUpdate);
+        if (lastUpdate_{section_id} == null || lastUpdate_{section_id}.getTime() != currentUpdate.getTime()) {{
+            lastUpdate_{section_id} = currentUpdate;
+            Plotly.d3.json("{data_path}", function(error, data) {{
+                tableHeader_{section_id}.selectAll("*").remove();
+                tableBody_{section_id}.selectAll("*").remove();
+                tableHeader_{section_id}.append("tr")
+                    .selectAll("th")
+                    .data(columns_{section_id})
+                    .enter()
+                    .append("th")
+                    .text(function (column) {{ return column; }});
+
+                var rows = tableBody_{section_id}.selectAll("tr")
+                    .data(data)
+                    .enter()
+                    .append("tr")
+
+                var cells = rows.selectAll("td")
+                    .data(function (row) {{
+                        return columns_{section_id}.map(function (column) {{
+                            return {{column: column, row: row["Variable"], value: row[column]}};
+                        }});
+                    }})
+                    .enter()
+                    .append(createTableElement)
+                    .attr("class", getColor_{section_id})
+                    .text(function (d) {{ return d.value; }});
+            }});
+        }};
+    }};
+}};
+
+
+function updateStatus_{section_id}() {{
+    xhrCheck_{section_id}.open("GET", "{lastupdate_path}", true);
+    xhrCheck_{section_id}.send();
+}};
+
+updateStatus_{section_id}();
+setInterval(updateStatus_{section_id}, {update_interval_seconds} * 1000);
+</script>
+"""
+
 
 TEXT_CONTENT_TEMPLATE = """
 <div id="{section_id}-container" class="content-container text-content-container">
@@ -311,10 +399,3 @@ setInterval(updateStatus_{section_id}, {update_interval_seconds} * 1000);
 </script>
 
 """
-
-
-def generate_step_string(step_data):
-    step_string = "".join((
-        GAUGE_PLOT_STEPS_TEMPLATE.format(step_range=step_range, color=color)
-        for step_range, color in step_data))
-    return step_string
