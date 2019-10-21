@@ -5,6 +5,12 @@
 
 /* Table styles and color */
 
+.full-width .table-content-container {
+  margin-left: auto;
+  margin-right: auto;
+  width: 60%;
+}
+
 .table-content-output table {
   font-size: 0.8em;
   line-height: 1.5em;
@@ -24,40 +30,9 @@
 .table-content-output tbody th {
   padding-left: 0.5em;
   padding-right: 0.5em;
+  transition: 0.2s;
 }
 
-
-@media screen and (max-width: 599px) {
-  .content-section .center {
-    width: 90%;
-  }
-}
-
-@media screen and (max-width: 479px) {
-  .content-section .center {
-    width: 100%;
-  }
-  .table-content-output table {
-    font-size: 0.75em;
-  }
-  .table-content-output tbody td,
-  .table-content-output tbody th {
-    padding-left: 0.4em;
-    padding-right: 0.4em;
-  }
-}
-
-@media screen and (max-width: 359px) {
-  .table-content-output table {
-    font-size: 0.7em;
-  }
-  .table-content-output tbody td,
-  .table-content-output tbody th {
-    padding-left: 0.3em;
-    padding-right: 0.3em;
-  }
-}
-  
 .table-content-output tbody th {
   padding-left: 0.2em;
   width: 5%
@@ -70,6 +45,43 @@
 .dark-bg-section .table-content-output th {
   background-color: #ffffff;
   background-color: var(--theme-bg-color, #ffffff);
+}
+
+@media screen and (max-width: 1200px) {
+  .full-width .table-content-container {
+    width: 80%;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .full-width .table-content-container {
+    width: 90%;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .full-width .table-content-container {
+    width: 100%;
+  }
+  .table-content-output table {
+    font-size: 0.75em;
+  }
+  .table-content-output tbody td,
+  .table-content-output tbody th {
+    padding-left: 0.4em;
+    padding-right: 0.4em;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .table-content-output table {
+    font-size: 0.7em;
+  }
+  .table-content-output tbody td,
+  .table-content-output tbody th {
+    padding-left: 0.3em;
+    padding-right: 0.3em;
+  }
 }
 
 .table-cell-nocolor {
@@ -107,13 +119,6 @@
   background-color: gray;
 }
 
-
-
-tbody tr td,
-tobdy tr th {
-  transition: 0.2s;
-}
-
 tbody tr:hover td,
 tbody tr:hover th,
 tbody tr:focus td,
@@ -125,6 +130,13 @@ tbody tr:active th {
 
 
 /* Verbatim text content container */
+
+.full-width .text-content-container {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 864px;
+  width: 90%;
+}
 
 .text-content-container {
   background-color: #001830;
@@ -138,10 +150,18 @@ tbody tr:active th {
 
 code.text-content-output {
   background-color: transparent;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 0.65em;
+  line-height: 1.5em;
   padding: 0;
   display: block;
+}
+
+@media screen and (max-width: 768px) {
+  .full-width .text-content-container {
+    padding-left: 5px;
+    padding-right: 5px;
+    width: 97.5%;
+  }
 }
 
 span.critical {

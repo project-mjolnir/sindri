@@ -362,7 +362,7 @@ def generate_table_block(
         update_interval_seconds=update_interval_seconds,
         )
     table_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
-        content=table_content, **block_metadata)
+        content=table_content, full_width="true", **block_metadata)
     return table_block
 
 
@@ -390,7 +390,8 @@ def generate_text_block(
         update_interval_seconds=update_interval_seconds,
         )
     text_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
-        content=text_content, button_link=text_path_full, **block_metadata)
+        content=text_content, button_link=text_path_full, full_width="true",
+        **block_metadata)
     return text_block
 
 

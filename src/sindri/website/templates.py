@@ -249,6 +249,8 @@ description: {section_description}
 ----
 nav_label: {section_nav_label}
 ----
+full_width: {full_width}
+----
 button_content: {button_content}
 ----
 button_type: {button_type}
