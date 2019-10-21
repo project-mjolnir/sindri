@@ -186,10 +186,13 @@ def generate_dashboard_data(full_data, dashboard_plots, output_path=None):
     return dashboard_data
 
 
-def generate_table_data(full_data, output_cols,
-                        time_period=None, drop_cols=None, col_conversions=None,
-                        sort_rows=False, reset_index=True, final_colnames=None,
-                        output_args=None, output_path=None):
+def generate_table_data(
+        full_data, output_cols,
+        time_period=None, drop_cols=None,
+        col_conversions=None, preprocess_fn=None, sort_rows=False,
+        reset_index=True, index_tostr=False, final_colnames=None,
+        output_args=None, output_path=None,
+        ):
     if time_period:
         full_data = full_data.last(time_period)
     full_data = full_data.copy()
@@ -200,9 +203,14 @@ def generate_table_data(full_data, output_cols,
         for var_name, (factor, n_digits) in col_conversions.items():
             full_data[var_name] = round(full_data[var_name] * factor, n_digits)
 
+    if preprocess_fn:
+        full_data = preprocess_fn(full_data)
+
     table_data = pd.concat(tuple(col_fn(full_data) for col_fn in output_cols),
                            axis=1, sort=sort_rows)
 
+    if index_tostr:
+        table_data.index = table_data.index.astype("str")
     if reset_index:
         table_data.reset_index(inplace=True)
     if final_colnames:
@@ -247,7 +255,7 @@ def generate_data(mainpage_blocks, project_path=None):
     else:
         project_path = Path()
 
-    full_data = sindri.process.ingest_status_data(n_days=31)
+    full_data = sindri.process.ingest_status_data(n_days=32)
     data_input_path = sindri.process.get_status_data_paths(n_days=-1)[-1]
 
     for block_type, block_metadata, block_args in mainpage_blocks:
@@ -349,11 +357,12 @@ def generate_dashboard_block(
 
 
 def generate_table_block(
-        block_metadata, data_args, color_map,
+        block_metadata, data_args, color_map, axis_name,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS):
     table_content = sindri.website.templates.TABLE_CONTENT_TEMPLATE.format(
         section_id=block_metadata["section_id"],
         color_map=color_map,
+        axis_name=axis_name,
         final_colnames=list(data_args["final_colnames"]),
         data_path=DATA_FILENAME.format(
             section_id=block_metadata["section_id"]),

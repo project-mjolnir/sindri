@@ -283,12 +283,12 @@ function getColor_{section_id}(dataValue) {{
     if (dataValue.value == null) {{
         return "table-cell-null";
     }};
-    if (! colorMap_{section_id}.hasOwnProperty(dataValue.row)) {{
+    if (! colorMap_{section_id}.hasOwnProperty(dataValue.{axis_name})) {{
         return "table-cell-nocolor";
     }};
     var colorScale = Plotly.d3.scale.threshold()
-    .domain(colorMap_{section_id}[dataValue.row][0])
-    .range(colorMap_{section_id}[dataValue.row][1]);
+    .domain(colorMap_{section_id}[dataValue.{axis_name}][0])
+    .range(colorMap_{section_id}[dataValue.{axis_name}][1]);
     return "table-cell-".concat(colorScale(dataValue.value));
 }};
 
@@ -331,7 +331,7 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
                 var cells = rows.selectAll("td")
                     .data(function (row) {{
                         return columns_{section_id}.map(function (column) {{
-                            return {{column: column, row: row["Variable"], value: row[column]}};
+                            return {{column: column, row: row[columns_{section_id}[0]], value: row[column]}};
                         }});
                     }})
                     .enter()

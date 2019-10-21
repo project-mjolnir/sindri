@@ -55,21 +55,18 @@
 
 @media screen and (max-width: 768px) {
   .full-width .table-content-container {
-    width: 90%;
+    width: 100%;
   }
 }
 
 @media screen and (max-width: 480px) {
-  .full-width .table-content-container {
-    width: 100%;
-  }
   .table-content-output table {
     font-size: 0.75em;
   }
   .table-content-output tbody td,
   .table-content-output tbody th {
-    padding-left: 0.4em;
-    padding-right: 0.4em;
+    padding-left: 0.3em;
+    padding-right: 0.3em;
   }
 }
 

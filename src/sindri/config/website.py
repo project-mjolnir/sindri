@@ -5,6 +5,9 @@ Configuration for the plots and tables on the Mjolnir website.
 # Standard library imports
 import datetime
 
+# Third party imports
+import pandas as pd
+
 # Local imports
 from sindri.utils.misc import WEBSITE_UPDATE_INTERVAL_S as UPDATE_INT
 from sindri.website.templates import (
@@ -26,6 +29,7 @@ STANDARD_COLORS_TEMP = [
 STANDARD_COLOR_TABLES = {
     "notzero": [[-0.5, 0.5], ["red", "green", "red"]],
     "uptime": [[1, 6, 24, 48], STANDARD_COLORS[::-1]],
+    "sensor_restarts": [[0.5, 1.5, 4.5, 24.5], STANDARD_COLORS],
     "battery_voltage": [[10.4, 11, 11.5, 12, 14, 14.3, 14.6, 15],
                         STANDARD_COLORS[::-1] + STANDARD_COLORS[1:]],
     "array_voltage": [[4, 12, 24, 32], STANDARD_COLORS[::-1]],
@@ -44,14 +48,16 @@ STANDARD_COLOR_TABLES = {
     "power_out": [[0.1, 6, 12, 24], STANDARD_COLORS[::-1]],
     "power_load": [[1, 8, 12, 13.5, 16, 18, 19, 20, 25],
                    STANDARD_COLORS[::-1] + ["teal"] + STANDARD_COLORS[1:]],
-    "crc_errors": [[0.98, 5, 12.5, 25], STANDARD_COLORS],
+    "crc_errors": [[0.98, 5, 12.5, 50], STANDARD_COLORS],
     "crc_errors_delta": [[0.1, 0.9, 1.5, 2.5], STANDARD_COLORS],
     "crc_errors_hourly": [[0.98, 2.5, 5, 10], STANDARD_COLORS],
     "valid_packets": [[0.5, 1.5, 2.5, 4.5], STANDARD_COLORS[::-1]],
+    "triggers_daily": [[10, 500, 1000, 2000, 4000, 8000, 16000],
+                       STANDARD_COLORS_TEMP],
     "trigger_rate": [[0.4, 1.4, 3, 6, 15, 30, 49], STANDARD_COLORS_TEMP],
-    "triggers_remaining": [[60, 1800, 3500, 7200], STANDARD_COLORS[::-1]],
+    "triggers_remaining": [[60, 2000, 5000, 10000], STANDARD_COLORS[::-1]],
     "bytes_used": [[0.01, 0.03, 0.05, 0.11], STANDARD_COLORS[::-1]],
-    "bytes_remaining": [[n * 0.22 for n in [60, 1800, 3500, 7200]],
+    "bytes_remaining": [[n * 0.022 for n in [60, 2000, 5000, 10000]],
                         STANDARD_COLORS[::-1]],
     }
 
@@ -99,6 +105,19 @@ COLOR_TABLE_MAP = {
     "bytes_written": STANDARD_COLOR_TABLES["bytes_used"],
     "bytes_remaining": STANDARD_COLOR_TABLES["bytes_remaining"],
     "triggers_remaining": STANDARD_COLOR_TABLES["triggers_remaining"],
+    }
+
+
+COLOR_TABLE_MAP_ARCHIVE = {
+    "Rsrt": STANDARD_COLOR_TABLES["sensor_restarts"],
+    "NAs": STANDARD_COLOR_TABLES["crc_errors"],
+    "Vbat": STANDARD_COLOR_TABLES["battery_voltage"],
+    "Pin": STANDARD_COLOR_TABLES["power_out"],
+    "Pout": STANDARD_COLOR_TABLES["power_load"],
+    "Tmax": STANDARD_COLOR_TABLES["temperature"],
+    "Ntrg": STANDARD_COLOR_TABLES["triggers_daily"],
+    "Ncrc": STANDARD_COLOR_TABLES["crc_errors"],
+    "Gbyt": STANDARD_COLOR_TABLES["bytes_remaining"],
     }
 
 
@@ -543,6 +562,7 @@ RAW_OUTPUT_DATA_ARGS = {
 
 RAW_OUTPUT_ARGS = {
     "data_args": RAW_OUTPUT_DATA_ARGS,
+    "axis_name": "row",
     "color_map": COLOR_TABLE_MAP,
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
     }
@@ -586,8 +606,66 @@ LOG_ARGS = {
     }
 
 
+ARCHIVE_METADATA = {
+    "section_id": "archive",
+    "section_title": "Data Archive",
+    "section_description": (
+        "Summary of archival status data from the last 30 days."),
+    "section_nav_label": "Archive",
+    "button_content": "",
+    "button_type": "",
+    "button_link": "",
+    "button_position": "",
+    "button_newtab": "",
+    }
+
+
+ARCHIVE_DATA_ARGS = {
+    "time_period": "30D",
+    "drop_cols": ("time", "timestamp"),
+    "col_conversions": {
+        "runtime": (1 / (60 * 60), 2),
+        "bytes_read": (1 / 1e9, 2),
+        "bytes_written": (1 / 1e9, 2),
+        "bytes_remaining": (1 / 1e9, 2),
+        },
+    "preprocess_fn": lambda full_data: full_data.groupby(
+        full_data.index.date, sort=False),
+    "output_cols": (
+        lambda full_data: full_data["sequence_count"].agg(
+            lambda full_data: full_data.diff(1).clip(lower=-1,
+                                                     upper=0).sum() * -1),
+        lambda full_data: full_data["sequence_count"].agg(
+            lambda full_data: pd.isna(full_data).sum()),
+        lambda full_data: full_data["adc_vb_f"].min(),
+        lambda full_data: full_data["power_out"].mean(),
+        lambda full_data: full_data["power_load"].mean(),
+        lambda full_data: full_data["t_batt"].max(),
+        lambda full_data: full_data["trigger_delta"].sum(),
+        lambda full_data: full_data["crc_errors_delta"].sum(),
+        lambda full_data: round(full_data["bytes_remaining"].min()),
+        ),
+    "sort_rows": False,
+    "reset_index": True,
+    "index_tostr": True,
+    "final_colnames": ["Date", "Rsrt", "NAs", "Vbat", "Pin", "Pout", "Tmax",
+                       "Ntrg", "Ncrc", "Gbyt"],
+    "output_args": {
+        "double_precision": 1, "date_format": "iso", "date_unit": "s"},
+}
+
+
+ARCHIVE_ARGS = {
+    "data_args": ARCHIVE_DATA_ARGS,
+    "axis_name": "column",
+    "color_map": COLOR_TABLE_MAP_ARCHIVE,
+    "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
+    }
+
+
 MAINPAGE_BLOCKS = (
     ("dashboard", STATUS_DASHBOARD_METADATA, STATUS_DASHBOARD_ARGS),
     ("table", RAW_OUTPUT_METADATA, RAW_OUTPUT_ARGS),
     ("text", LOG_METADATA, LOG_ARGS),
+    ("table", ARCHIVE_METADATA, ARCHIVE_ARGS),
     )

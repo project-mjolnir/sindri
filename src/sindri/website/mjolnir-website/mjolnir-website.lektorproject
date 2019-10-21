@@ -8,7 +8,7 @@ included_assets = .nojekyll
 target = ghpages+ssh://hamma-dev/mjolnir-website?cname=www.hamma.dev
 
 [theme_settings]
-title = Mjolnir Status Dashboard
+title = HAMMA Mjolnir Status Dashboard
 content_lang = en-US
 author = UAH HAMMA Group
 copyright = &copy; 2019 UAH HAMMA Group
@@ -33,8 +33,8 @@ content_security_policy_style_src =
 content_security_policy_connect_src =
 loader_enable = false
 nav_logo_path = /static/images/mjolnir-logo.png
-nav_logo_text = HAMMA Mjolnir
-nav_extralinks = NSSTC: https://nsstc.uah.edu/
+nav_logo_text = Mjolnir
+nav_extralinks =
 footer_links =
 footer_license_name =
 footer_license_link =
