@@ -70,7 +70,7 @@ function convertNaN(value) {{
 }};
 
 
-var config = {{
+var plotConfig_{section_id} = {{
     editable: false,
     responsive: true,
     scrollzoom: false,
@@ -88,7 +88,7 @@ var allPlots_{section_id} = {{
 
 
 Object.keys(allPlots_{section_id}).forEach(function(plotid) {{
-    Plotly.newPlot(plotid, allPlots_{section_id}[plotid].data, allPlots_{section_id}[plotid].layout, config);
+    Plotly.newPlot(plotid, allPlots_{section_id}[plotid].data, allPlots_{section_id}[plotid].layout, plotConfig_{section_id});
 }});
 
 function updatePlot(allPlots, plotid, statusData) {{
@@ -170,14 +170,16 @@ DASHBOARD_PLOT_TEMPLATE = """
                 axis: {{
                     automargin: true,
                     autotick: false,
+                    color: "{plot_fgcolor}",
                     dtick: {dtick},
                     range: {range},
                     tick0: {tick0},
-                    tickcolor: "white",
+                    ticksuffix: "{suffix}",
+                    tickangle: 0,
                     tickwidth: 1,
                 }},
                 bar: {{ color: "cyan" }},
-                bgcolor: "white",
+                bgcolor: "{plot_fgcolor}",
                 borderwidth: 0,
                 bordercolor: "black",
                 steps: [ {steps}],
@@ -189,17 +191,18 @@ DASHBOARD_PLOT_TEMPLATE = """
             }},
             number: {{
                 font: {{ color: "{number_color}" }},
-                suffix: "{number_suffix}",
+                suffix: "{suffix}",
             }},
         }},
     ],
     layout: {{
         autosize: true,
-        font: {{ color: "white" }},
+        font: {{ color: "{plot_fgcolor}" }},
         height: 200,
-        margin: {{ t: 25, b: 5, l: 25, r: 25 }},
+        margin: {{ t: 25, b: 5, l: 50, r: 50 }},
         paper_bgcolor: "rgba(0, 0, 0, 0)",
         plot_bgcolor: "rgba(0, 0, 0, 0)",
+        seperators: ". ",
     }},
     updateFunction: function(allPlots, plotid, statusData) {{
         data = {{}};
@@ -236,7 +239,7 @@ if (! foundStep) {
 GAUGE_PLOT_UPDATE_CODE = (GAUGE_PLOT_UPDATE_CODE_VALUE
                           + GAUGE_PLOT_UPDATE_CODE_COLOR)
 
-GAUGE_PLOT_STEPS_TEMPLATE = "{{ range: [{begin}, {end}], color: '{color}' }}, "
+GAUGE_PLOT_STEPS_TEMPLATE = "{{ range: [{begin}, {end}], color: '{color}' }},"
 
 
 CONTENT_SECTION_TEMPLATE = """
@@ -352,6 +355,7 @@ function updateStatus_{section_id}() {{
 updateStatus_{section_id}();
 setInterval(updateStatus_{section_id}, {update_interval_seconds} * 1000);
 </script>
+
 """
 
 
@@ -399,5 +403,170 @@ function updateStatus_{section_id}() {{
 updateStatus_{section_id}();
 setInterval(updateStatus_{section_id}, {update_interval_seconds} * 1000);
 </script>
+
+"""
+
+
+PLOT_CONTENT_TEMPLATE = """
+<div id="{section_id}-container" class="content-container plot-content-container">
+  <div id="{section_id}-output" class="content-output plot-content-output"></div>
+</div>
+
+<script>
+
+function unpack(rows, key) {{
+    return rows.map(function(row) {{ return row[key]; }});
+}};
+
+var plotConfig_{section_id} = {{
+    editable: false,
+    responsive: true,
+    scrollzoom: true,
+    staticplot: false,
+}};
+
+var lastUpdate_{section_id} = null;
+
+var subplots_{section_id} = [
+    {sub_plots}
+];
+
+plotLayout_{section_id} = {{
+    autosize: true,
+    font: {{ color: "{plot_fgcolor}" }},
+    grid: {{
+        columns: 1,
+        rows: subplots_{section_id}.length,
+        roworder: "top to bottom",
+        subplots: [{subplots_list}],
+        xgap: 0,
+        ygap: {y_gap},
+    }},
+    height: {plot_height},
+    hovermode: "compare",
+    margin: {plot_margin},
+    paper_bgcolor: "rgba(0, 0, 0, 0)",
+    plot_bgcolor: "{plot_bgcolor}",
+    seperators: ". ",
+    showlegend: false,
+    title: {{ text: "{plot_title}" }},
+    xaxis: {{
+        automargin: true,
+        color: "{plot_fgcolor}",
+        type: "{xaxis_type}",
+    }},
+    {y_axes}
+    shapes: [
+    {shape_list}
+    ],
+}};
+
+
+var firstUpdate = true;
+
+function createSubplots(plotid, subplotList, statusData) {{
+    for (i = 0; i < subplotList.length; i++) {{
+        subplotList[i].x = statusData.{x_variable};
+        subplotList[i].y = statusData[subplotList[i].name];
+    }};
+    Plotly.newPlot(plotid, subplotList, plotLayout_{section_id}, plotConfig_{section_id});
+}};
+
+function updateSubplots(plotid, subplotList, statusData) {{
+    for (i = 0; i < subplotList.length; i++) {{
+        var data = {{}}
+        data["x"] = statusData.{x_variable};
+        data["y"] = statusData[subplotList[i].name];
+        Plotly.restyle(plotid, data, i);
+    }};
+}};
+
+var xhrUpdate_{section_id} = new XMLHttpRequest();
+xhrUpdate_{section_id}.onreadystatechange = function() {{
+    if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
+        var statusData = JSON.parse(this.responseText);
+        if (firstUpdate) {{
+            createSubplots("{section_id}-output", subplots_{section_id}, statusData);
+        }} else {{
+            updateSubplots("{section_id}-output", subplots_{section_id}, statusData);
+            firstUpdate = false;
+        }};
+    }};
+}};
+
+var xhrCheck_{section_id} = new XMLHttpRequest();
+xhrCheck_{section_id}.onreadystatechange = function() {{
+    if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
+        var lastUpdateData = JSON.parse(this.responseText);
+        var currentUpdate = new Date(lastUpdateData.lastUpdate);
+        if (lastUpdate_{section_id} == null || lastUpdate_{section_id}.getTime() != currentUpdate.getTime()) {{
+            lastUpdate_{section_id} = currentUpdate;
+            xhrUpdate_{section_id}.open("GET", "{data_path}", true);
+            xhrUpdate_{section_id}.send();
+        }};
+    }};
+}};
+
+function updateStatus_{section_id}() {{
+    xhrCheck_{section_id}.open("GET", "{lastupdate_path}", true);
+    xhrCheck_{section_id}.send();
+}};
+
+updateStatus_{section_id}()
+setInterval(updateStatus_{section_id}, {update_interval_seconds} * 1000);
+</script>
+
+"""
+
+SUBPLOT_DATA_TEMPLATE = """
+{{
+    type: "scatter",
+    connectgaps: false,
+    hoverinfo: "x+y+text",
+    hoverlabel: {{
+        bgcolor: "{plot_bgcolor}",
+        font: {{ color: "{plot_fgcolor}" }},
+    }},
+    line: {{ color: "{plot_fgcolor}" }},
+    mode: "lines",
+    name: "{subplot_variable}",
+    text: "{subplot_title}",
+    xaxis: "x",
+    x: [0,],
+    yaxis: "y{idx}",
+    y: [0,],
+}},
+
+"""
+
+SUBPLOT_AXIS_TEMPLATE = """
+yaxis{idx}: {{
+    automargin: true,
+    color: "{plot_fgcolor}",
+    dtick: {dtick},
+    range: {range},
+    tick0: {tick0},
+    ticksuffix: "{suffix}",
+    title: {{ text: "{subplot_title}" }},
+    type: "linear",
+    zerolinecolor: "gray",
+}},
+
+"""
+
+SHAPE_RANGE_TEMPLATE = """
+{{
+    type: "rect",
+    fillcolor: "{color}",
+    layer: "below",
+    line: {{ width: 0 }},
+    opacity: 0.15,
+    xref: "paper",
+    x0: 0,
+    x1: 1,
+    yref: "y{idx}",
+    y0: {begin},
+    y1: {end},
+}},
 
 """

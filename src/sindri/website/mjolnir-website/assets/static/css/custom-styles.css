@@ -176,3 +176,57 @@ span.info {
 span.debug {
   color: green;
 }
+
+
+/* Plot object container */
+
+.plot-content-container {
+  border-radius: 60px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 30px;
+  padding-left: 40px;
+  padding-right: 40px;
+  padding-top: 40px;
+  padding-bottom: 40px;
+  width: 90%;
+}
+
+.light-bg-section .plot-content-container {
+  background-color: #e8ecf1;
+  background-color: var(--theme-bg-alt-color, #e8ecf1);
+}
+.dark-bg-section .plot-content-container {
+  background-color: #ffffff;
+  background-color: var(--theme-bg-color, #ffffff);
+}
+
+@media screen and (max-width: 1200px) {
+  .full-width .plot-content-container {
+    border-radius: 40px;
+    margin-bottom: 30px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 30px;
+    padding-bottom: 30px;
+    width: 97.5%;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .full-width .plot-content-container {
+    border-radius: 0px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .full-width .plot-content-container {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+}

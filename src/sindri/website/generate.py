@@ -18,7 +18,6 @@ import pandas as pd
 
 # Local imports
 import sindri.process
-import sindri.utils.misc
 import sindri.website.templates
 
 
@@ -39,6 +38,7 @@ SENTINEL_VALUE_JSON = -999
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
+STATUS_UPDATE_INTERVAL_SLOW_SECONDS = 600
 
 
 DASHBOARD_DATA_ARGS_DEFAULT = {
@@ -80,10 +80,14 @@ class CustomJSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def write_data_json(output_data, path):
+def write_data_json(output_data, path, by_line=False):
+    if by_line:
+        separators = (",\n", ":")
+    else:
+        separators = (",", ":")
     with open(path, "w", encoding="utf-8", newline="\n") as jsonfile:
         json.dump(output_data, jsonfile,
-                  separators=(",", ":"), cls=CustomJSONEncoder)
+                  separators=separators, cls=CustomJSONEncoder)
 
 
 def write_lastupdate_json(path=None, lastupdate=None,
@@ -122,7 +126,7 @@ def check_update(input_path, lastupdate_path):
     return True
 
 
-def get_plot_data(full_data, plot_type, **kwargs):
+def get_dashboard_plot_data(full_data, plot_type, **kwargs):
     if not plot_type:
         return None
 
@@ -171,7 +175,7 @@ def generate_dashboard_data(full_data, dashboard_plots, output_path=None):
     for plot_id, plot in dashboard_plots.items():
         if plot["plot_type"]:
             try:
-                plot_data = get_plot_data(
+                plot_data = get_dashboard_plot_data(
                     full_data,
                     plot_type=plot["plot_type"],
                     **plot["plot_data"],
@@ -249,6 +253,39 @@ def generate_text_data(
     return None
 
 
+def generate_plot_data(
+        full_data, plot_subplots, time_period=None, decimate=None,
+        col_conversions=None, round_floats=None,
+        index_converter=None, output_path=None):
+    if time_period:
+        full_data = full_data.last(time_period)
+    if decimate and decimate > 1:
+        full_data = full_data.iloc[::decimate, :]
+    if col_conversions:
+        full_data = full_data.copy()
+        for var_name, (factor, n_digits) in col_conversions.items():
+            full_data[var_name] = round(full_data[var_name] * factor, n_digits)
+
+    plot_data = full_data[[col for col in plot_subplots]]
+
+    if round_floats:
+        plot_data = round(plot_data, round_floats)
+
+    if output_path:
+        plot_data_json = (plot_data.replace({np.nan: None})
+                          .to_dict(orient="list"))
+        if plot_data.index.name:
+            index_name = plot_data.index.name
+        else:
+            index_name = "index"
+        if index_converter is None:
+            plot_data_json[index_name] = list(plot_data.index)
+        else:
+            plot_data_json[index_name] = list(index_converter(plot_data.index))
+        write_data_json(plot_data_json, output_path, by_line=True)
+    return plot_data
+
+
 def generate_data(mainpage_blocks, project_path=None):
     if project_path:
         project_path = Path(project_path) / ASSET_PATH
@@ -282,23 +319,38 @@ def generate_data(mainpage_blocks, project_path=None):
         if block_type == "dashboard":
             generate_dashboard_data(full_data=full_data.last("27H"),
                                     **data_args)
-        if block_type == "table":
+        elif block_type == "table":
             generate_table_data(full_data=full_data, **data_args)
-        if block_type == "text":
+        elif block_type == "text":
             generate_text_data(**data_args)
+        elif block_type == "plot":
+            generate_plot_data(full_data=full_data,
+                               plot_subplots=block_args["plot_subplots"],
+                               **data_args)
 
 
-def generate_step_string(color_domain, color_range):
+def lookup_in_map(param, param_map):
+    if param_map is None or param is None:
+        return {}
+    map_result = param_map.get(param, None)
+    if map_result is None:
+        return {}
+    return copy.deepcopy(map_result)
+
+
+def generate_step_strings(color_domain, color_range, endpoints,
+                          template_string, **extra_args):
     if len(color_domain) != (len(color_range) - 1):
         raise ValueError("Color domain and range lengths do not align "
                          f"(are {len(color_domain)} and {len(color_range)}).")
-    color_domain = [-1e9] + color_domain + [1e9]
-    step_string = "".join((
-        sindri.website.templates.GAUGE_PLOT_STEPS_TEMPLATE.format(
-            begin=begin, end=end, color=color)
+    color_domain = (list(endpoints[:1])
+                    + list(color_domain)
+                    + list(endpoints[-1:]))
+    step_strings = tuple(
+        template_string.format(begin=begin, end=end, color=color, **extra_args)
         for begin, end, color in
-        zip(color_domain[:-1], color_domain[1:], color_range)))
-    return step_string
+        zip(color_domain[:-1], color_domain[1:], color_range))
+    return step_strings
 
 
 def generate_steps(plot, color_map=None):
@@ -306,20 +358,20 @@ def generate_steps(plot, color_map=None):
     if steps is False:
         return ""
     if steps is None:
-        if color_map is None:
-            return ""
-        plot_variable = plot["plot_data"].get("variable", None)
-        if plot_variable is None:
-            return ""
-        steps = color_map.get(plot_variable, None)
-        if steps is None:
-            return ""
-    return generate_step_string(*steps)
+        steps = lookup_in_map(plot["plot_data"].get("variable", None),
+                              color_map)
+    if not steps:
+        return ""
+    step_strings = generate_step_strings(
+        *steps, endpoints=[-1e9, 1e9],
+        template_string=sindri.website.templates.GAUGE_PLOT_STEPS_TEMPLATE)
+    return " ".join(step_strings)
 
 
 def generate_dashboard_block(
         block_metadata,
         data_args,
+        layout_map=None,
         color_map=None,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         update_interval_fast_seconds=STATUS_UPDATE_INTERVAL_FAST_SECONDS,
@@ -328,12 +380,17 @@ def generate_dashboard_block(
     all_plots = []
     fast_update_plots = []
     for plot_id, plot in data_args["dashboard_plots"].items():
+        layout_args = lookup_in_map(plot["plot_data"].get("variable", None),
+                                    layout_map)
+        layout_args["tick0"] = layout_args.get(
+            "range", plot["plot_params"].get("range", None))[0]
         plot["plot_params"]["steps"] = generate_steps(plot, color_map)
         widget_block = (sindri.website.templates.DASHBOARD_ITEM_TEMPLATE
                         .format(plot_id=plot_id, **plot["plot_metadata"]))
         widget_blocks.append(widget_block)
         plot_setup = (sindri.website.templates.DASHBOARD_PLOT_TEMPLATE
-                      .format(plot_id=plot_id, **plot["plot_params"]))
+                      .format(plot_id=plot_id, **plot["plot_params"],
+                              **layout_args))
         all_plots.append(plot_setup)
         if plot.get("fast_update", None):
             fast_update_plots.append(plot_id)
@@ -404,6 +461,75 @@ def generate_text_block(
     return text_block
 
 
+def generate_plot_block(
+        block_metadata, data_args, content_args, plot_subplots,
+        name_map=None, layout_map=None, color_map=None,
+        update_interval_seconds=STATUS_UPDATE_INTERVAL_SLOW_SECONDS,
+        ):
+    idx_strings = []
+    subplot_items = []
+    yaxis_items = []
+    shape_items = []
+    for idx, (subplot_variable, subplot_params) in enumerate(
+            plot_subplots.items()):
+        idx_string = str(idx + 1) if idx else ""
+        idx_strings.append(idx_string)
+        layout_args = lookup_in_map(subplot_variable, layout_map)
+        layout_args["tick0"] = layout_args["range"][0]
+        range_bump = (layout_args["range"][1] - layout_args["range"][0]) * 0.05
+        layout_args["range"] = [layout_args["range"][0] - range_bump,
+                                layout_args["range"][1] + range_bump]
+        subplot_title = lookup_in_map(subplot_variable, name_map)
+        if not subplot_title:
+            subplot_title = subplot_variable.replace("_", " ").title()
+
+        subplot = sindri.website.templates.SUBPLOT_DATA_TEMPLATE.format(
+            subplot_variable=subplot_variable,
+            subplot_title=subplot_title,
+            idx=idx_string,
+            plot_bgcolor=content_args["plot_bgcolor"],
+            plot_fgcolor=content_args["plot_fgcolor"],
+            )
+        subplot_items.append(subplot)
+
+        subplot_yaxis = sindri.website.templates.SUBPLOT_AXIS_TEMPLATE.format(
+            subplot_title=subplot_title,
+            idx=idx_string,
+            plot_fgcolor=content_args["plot_fgcolor"],
+            **layout_args,
+            )
+        yaxis_items.append(subplot_yaxis)
+
+        if color_map and color_map.get(subplot_variable, None):
+            step_strings = generate_step_strings(
+                color_map[subplot_variable][0],
+                color_map[subplot_variable][1],
+                endpoints=layout_args["range"],
+                template_string=sindri.website.templates.SHAPE_RANGE_TEMPLATE,
+                idx=idx_string,
+                )
+            shape_items = shape_items + list(step_strings)
+
+    plot_content = sindri.website.templates.PLOT_CONTENT_TEMPLATE.format(
+        section_id=block_metadata["section_id"],
+        sentinel_value_json=SENTINEL_VALUE_JSON,
+        sub_plots="\n".join(subplot_items),
+        subplots_list=", ".join(["'[xy{}]'".format(n) for n in idx_strings]),
+        y_axes="\n".join(yaxis_items),
+        shape_list="\n".join(shape_items),
+        data_path=DATA_FILENAME.format(
+            section_id=block_metadata["section_id"]),
+        lastupdate_path=LASTUPDATE_FILENAME.format(
+            section_id=block_metadata["section_id"]),
+        update_interval_seconds=update_interval_seconds,
+        **content_args,
+        )
+
+    plot_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
+        content=plot_content, full_width="true", **block_metadata)
+    return plot_block
+
+
 def generate_mainfile_content(mainpage_blocks):
     rendered_blocks = []
     for block_type, block_metadata, block_args in mainpage_blocks:
@@ -414,9 +540,11 @@ def generate_mainfile_content(mainpage_blocks):
             rendered_block = generate_table_block(block_metadata, **block_args)
         elif block_type == "text":
             rendered_block = generate_text_block(block_metadata, **block_args)
+        elif block_type == "plot":
+            rendered_block = generate_plot_block(block_metadata, **block_args)
         else:
             raise ValueError("Block type must be one of "
-                             "{'dashboard', 'table', 'text'}")
+                             "{'dashboard', 'table', 'text', 'plot'}")
         rendered_blocks.append(rendered_block)
     mainfile_content = (sindri.website.templates.MAINPAGE_SENSOR_TEMPLATE
                         .format(main_content="\n".join(rendered_blocks)))

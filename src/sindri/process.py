@@ -26,9 +26,14 @@ CALCULATED_COLUMNS = (
     ("crc_errors_delta", "crc_errors",
      lambda full_data: full_data["crc_errors"].diff(1).clip(lower=0)),
     ("crc_errors_hourly", "crc_errors_delta",
-     lambda full_data: full_data["crc_errors_delta"].last("1H").sum()),
+     lambda full_data:
+         full_data["crc_errors_delta"].rolling(60, min_periods=3).sum()
+         / round(full_data["time"].diff(60).dt.total_seconds() / (60 * 60))),
     ("crc_errors_daily", "crc_errors_hourly",
-     lambda full_data: full_data["crc_errors_delta"].last("24H").sum()),
+     lambda full_data:
+         full_data["crc_errors_delta"].rolling(60 * 24, min_periods=60).sum()
+         / round(full_data["time"].diff(60 * 24).dt.total_seconds()
+                 / (60 * 60 * 24))),
     ("trigger_delta", "valid_packets",
      (lambda full_data: round(
          -1 * full_data["bytes_remaining"].diff(1)
