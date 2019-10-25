@@ -243,3 +243,66 @@ span.debug {
     max-width: 864px;
   }
 }
+
+
+/* Daily page formatting */
+
+#section-dailytop {
+  margin: 0;
+  padding: 0;
+}
+
+.button-container {
+  display: flex;
+  flex-direction: row;
+  margin-left: auto;
+  margin-right: auto;
+  width: 80%;
+}
+
+.button-container button {
+  border-radius: 3px;
+  flex: 1 1 auto;
+  margin-left: 3em;
+  margin-right: 3em;
+}
+
+.button-container button:hover:disabled {
+  color: gray;
+}
+
+#section-dailytable .table-content-container {
+  height: 720px;
+  overflow: scroll;
+  width: 95%;
+}
+
+@media screen and (max-width: 1200px) {
+  .button-container {
+    width: 90%;
+  }
+  .button-container button {
+    margin-left: 1.5em;
+    margin-right: 1.5em;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .button-container {
+    width: 95%;
+  }
+  .button-container button {
+    margin-left: 1em;
+    margin-right: 1em;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .button-container {
+    width: 97.5%;
+  }
+  .button-container button {
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+  }
+}

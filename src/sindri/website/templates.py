@@ -292,7 +292,7 @@ function getColor_{section_id}(dataValue) {{
     var colorScale = Plotly.d3.scale.threshold()
     .domain(colorMap_{section_id}[dataValue.{color_map_axis}][0])
     .range(colorMap_{section_id}[dataValue.{color_map_axis}][1]);
-    return "table-cell-".concat(colorScale(dataValue.value));
+    return "table-cell-" + colorScale(dataValue.value);
 }};
 
 var lastUpdate_{section_id} = null;
@@ -309,6 +309,8 @@ function createTableElement(dataValue) {{
     return document.createElement("td");
 }};
 
+var enableQueryParsing = enableQueryParsing || false;
+
 var xhrCheck_{section_id} = new XMLHttpRequest();
 xhrCheck_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
@@ -316,9 +318,26 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
         var currentUpdate = new Date(lastUpdateData.lastUpdate);
         if (lastUpdate_{section_id} == null || lastUpdate_{section_id}.getTime() != currentUpdate.getTime()) {{
             lastUpdate_{section_id} = currentUpdate;
-            Plotly.d3.json("{data_path}", function(error, data) {{
+            if (enableQueryParsing) {{
+                queryParams = parseQueryParams();
+                var extraPathText = queryParams["date"];
+                dataPath = "{data_path}" + extraPathText + ".{extension}";
+                document.getElementById("{section_id}-button").href = dataPath;
+            }} else {{
+                dataPath = "{data_path}" + ".{extension}";
+                extraPathText = dataPath;
+            }};
+            Plotly.d3.{extension}(dataPath, function(error, data) {{
+                if ((error || ! data || data.length < 1 ||  Object.values(Plotly.d3.values(data)[0])[0] == "")) {{
+                    window.alert("Data for " + extraPathText + " not availible.");
+                    return;
+                }};
                 tableHeader_{section_id}.selectAll("*").remove();
                 tableBody_{section_id}.selectAll("*").remove();
+                if ((! columns_{section_id}) || (columns_{section_id}.length < 1)) {{
+                    columns_{section_id} = Object.keys(Plotly.d3.values(data)[0]);
+                }};
+
                 tableHeader_{section_id}.append("tr")
                     .selectAll("th")
                     .data(columns_{section_id})
@@ -340,19 +359,25 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
                     .enter()
                     .append(createTableElement)
                     .attr("class", getColor_{section_id})
-                    .text(function (d) {{ return d.value; }});
+                    .html(function (d) {{ return d.value; }});
             }});
         }};
     }};
 }};
 
-
-function updateStatus_{section_id}() {{
+function updateStatus_{section_id}(event) {{
+    event = event || false;
+    if (event) {{
+        lastUpdate_{section_id} = null;
+    }}
     xhrCheck_{section_id}.open("GET", "{lastupdate_path}", true);
     xhrCheck_{section_id}.send();
 }};
-
 updateStatus_{section_id}();
+
+if (enableQueryParsing) {{
+    window.addEventListener("popstate", updateStatus_{section_id});
+}}
 setInterval(updateStatus_{section_id}, {update_interval_seconds} * 1000);
 </script>
 
@@ -414,10 +439,6 @@ PLOT_CONTENT_TEMPLATE = """
 
 <script>
 
-function unpack(rows, key) {{
-    return rows.map(function(row) {{ return row[key]; }});
-}};
-
 var plotConfig_{section_id} = {{
     editable: false,
     responsive: true,
@@ -461,13 +482,20 @@ plotLayout_{section_id} = {{
     ],
 }};
 
-
 var firstUpdate = true;
+var enableQueryParsing = enableQueryParsing || false;
+
+function unpack(data, key) {{
+    if (data.constructor === Array) {{
+        return data.map(function(row) {{ return row[key]; }});
+    }};
+    return data[key];
+}};
 
 function createSubplots(plotid, subplotList, statusData) {{
     for (i = 0; i < subplotList.length; i++) {{
-        subplotList[i].x = statusData.{x_variable};
-        subplotList[i].y = statusData[subplotList[i].name];
+        subplotList[i].x = unpack(statusData, "{x_variable}");
+        subplotList[i].y = unpack(statusData, subplotList[i].name);
     }};
     Plotly.newPlot(plotid, subplotList, plotLayout_{section_id}, plotConfig_{section_id});
 }};
@@ -475,22 +503,9 @@ function createSubplots(plotid, subplotList, statusData) {{
 function updateSubplots(plotid, subplotList, statusData) {{
     for (i = 0; i < subplotList.length; i++) {{
         var data = {{}}
-        data["x"] = statusData.{x_variable};
-        data["y"] = statusData[subplotList[i].name];
+        data["x"] = unpack(statusData, "{x_variable}");
+        data["y"] = unpack(statusData, subplotList[i].name);
         Plotly.restyle(plotid, data, i);
-    }};
-}};
-
-var xhrUpdate_{section_id} = new XMLHttpRequest();
-xhrUpdate_{section_id}.onreadystatechange = function() {{
-    if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
-        var statusData = JSON.parse(this.responseText);
-        if (firstUpdate) {{
-            createSubplots("{section_id}-output", subplots_{section_id}, statusData);
-        }} else {{
-            updateSubplots("{section_id}-output", subplots_{section_id}, statusData);
-            firstUpdate = false;
-        }};
     }};
 }};
 
@@ -501,18 +516,44 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
         var currentUpdate = new Date(lastUpdateData.lastUpdate);
         if (lastUpdate_{section_id} == null || lastUpdate_{section_id}.getTime() != currentUpdate.getTime()) {{
             lastUpdate_{section_id} = currentUpdate;
-            xhrUpdate_{section_id}.open("GET", "{data_path}", true);
-            xhrUpdate_{section_id}.send();
+            if (enableQueryParsing) {{
+                queryParams = parseQueryParams();
+                var extraPathText = queryParams["date"];
+                dataPath = "{data_path}" + extraPathText + ".{extension}"
+            }} else {{
+                dataPath = "{data_path}" + ".{extension}";
+                extraPathText = dataPath;
+            }};
+
+            Plotly.d3.{extension}(dataPath, function(error, statusData) {{
+                if ((error || ! statusData || statusData.length < 1 ||  Object.values(Plotly.d3.values(statusData)[0])[0] == "")) {{
+                    window.alert("Data for " + extraPathText + " not availible.");
+                    return;
+                }};
+                if (firstUpdate) {{
+                    createSubplots("{section_id}-output", subplots_{section_id}, statusData);
+                }} else {{
+                    updateSubplots("{section_id}-output", subplots_{section_id}, statusData);
+                    firstUpdate = false;
+                }};
+            }});
         }};
     }};
 }};
 
-function updateStatus_{section_id}() {{
+function updateStatus_{section_id}(event) {{
+    event = event || false;
+    if (event) {{
+        lastUpdate_{section_id} = null;
+    }}
     xhrCheck_{section_id}.open("GET", "{lastupdate_path}", true);
     xhrCheck_{section_id}.send();
 }};
-
 updateStatus_{section_id}()
+
+if (enableQueryParsing) {{
+    window.addEventListener("popstate", updateStatus_{section_id});
+}}
 setInterval(updateStatus_{section_id}, {update_interval_seconds} * 1000);
 </script>
 
@@ -560,7 +601,7 @@ SHAPE_RANGE_TEMPLATE = """
     fillcolor: "{color}",
     layer: "below",
     line: {{ width: 0 }},
-    opacity: 0.15,
+    opacity: {shape_opacity},
     xref: "paper",
     x0: 0,
     x1: 1,
@@ -568,5 +609,87 @@ SHAPE_RANGE_TEMPLATE = """
     y0: {begin},
     y1: {end},
 }},
+
+"""
+
+QUERY_PARAM_PARSER = """
+var enableQueryParsing = true;
+function parseQueryParams(query) {{
+    var query = query || window.location.search.substring(1);
+    if (! query) {{
+        return {{}};
+    }};
+    var queryParams = {{}};
+    var queryElements = query.split("&");
+    for (var i = 0; i < queryElements.length; i++) {{
+        var queryPair = queryElements[i].split("=");
+        var key = decodeURIComponent(queryPair[0]);
+        var value = decodeURIComponent(queryPair[1]);
+        queryParams[key] = value;
+    }};
+    return queryParams;
+}};
+
+function serializeQueryParams(queryParams) {{
+    var queryString = [];
+    for (var param in queryParams) {{
+        if (queryParams.hasOwnProperty(param)) {{
+            queryString.push(encodeURIComponent(param) + "=" + encodeURIComponent(queryParams[param]));
+        }};
+    }};
+  return "?" + queryString.join("&");
+}};
+
+var queryParams = parseQueryParams();
+if (! queryParams || Object.keys(queryParams).length < 1) {{
+    queryParams = {default_query_params};
+    if (queryParams || Object.keys(queryParams).length > 1) {{
+        history.pushState(queryParams, "", serializeQueryParams(queryParams));
+    }};
+}};
+
+"""
+
+DYNAMIC_PAGE_TOP_SECTION = """
+<div class="button-container">
+  <button id="{section_id}-button-left" class="content-button text-button dynamic-button direction-button, left-button">{button_left_text}</button>
+  <button id="{section_id}-button-right" class="content-button text-button dynamic-button, direction-button, right-button">{button_right_text}</button>
+</div>
+
+<script>
+{query_param_parser}
+
+function checkDisableButton() {{
+    var currentDate = new Date().toISOString().split('T')[0];
+    if (currentDate === queryParams["date"]) {{
+        document.getElementById("{section_id}-button-right").disabled = true;
+    }} else {{
+        document.getElementById("{section_id}-button-right").disabled = false;
+    }};
+}};
+
+checkDisableButton();
+
+function updateQueryParams(queryParams) {{
+    history.pushState(queryParams, "", serializeQueryParams(queryParams));
+    var popStateEvent = new PopStateEvent("popstate", {{ state: queryParams }});
+    checkDisableButton();
+    dispatchEvent(popStateEvent);
+    return queryParams;
+}};
+
+function shiftQueryDate(shiftDays) {{
+    var dateElements = queryParams["date"].split("-");
+    var displayedDate = new Date(Date.UTC(dateElements[0], dateElements[1] - 1, dateElements[2]));
+    displayedDate.setDate(displayedDate.getDate() + shiftDays);
+    queryParams["date"] = displayedDate.toISOString().split("T")[0];
+    updateQueryParams(queryParams);
+}};
+
+function shiftQueryDateLeftOne() {{ shiftQueryDate(-1); }};
+function shiftQueryDateRightOne() {{ shiftQueryDate(1); }};
+document.getElementById("{section_id}-button-left").addEventListener("click", shiftQueryDateLeftOne);
+document.getElementById("{section_id}-button-right").addEventListener("click", shiftQueryDateRightOne);
+</script>
 
 """

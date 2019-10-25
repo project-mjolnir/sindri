@@ -95,7 +95,6 @@ def preprocess_status_data(raw_status_data, decimate=None,
         status_data = raw_status_data
     status_data["time"] = pd.to_datetime(status_data["time"],
                                          format="%Y-%m-%d %H:%M:%S.%f")
-    status_data.drop("timestamp", inplace=True, axis=1, errors="ignore")
     status_data.set_index("time", drop=False, inplace=True)
 
     status_data = calculate_columns(

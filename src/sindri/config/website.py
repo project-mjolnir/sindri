@@ -67,7 +67,7 @@ VARIABLE_NAME_MAP = {
 # --- Layout map ---
 
 STANDARD_LAYOUTS = {
-    "uptime": {"dtick": 120, "range": [0, 15 * 24], "suffix": " h"},
+    "uptime": {"dtick": 240, "range": [0, 30 * 24], "suffix": " h"},
     "ping": {"dtick": 1, "range": [0, 2], "suffix": ""},
     "battery_voltage": {"dtick": 1, "range": [10, 15], "suffix": " V"},
     "array_voltage": {"dtick": 10, "range": [0, 50], "suffix": " V"},
@@ -266,7 +266,7 @@ STATUS_DASHBOARD_PLOTS = {
         "plot_data": {
             "data_functions": (lambda base_data, data_args: base_data[-1], ),
             "variable": (lambda full_data:
-                         (datetime.datetime.now() - full_data.index)
+                         (datetime.datetime.utcnow() - full_data.index)
                          .total_seconds())
             },
         "plot_metadata": {
@@ -631,8 +631,8 @@ RAW_OUTPUT_DATA_ARGS = {
 
 RAW_OUTPUT_ARGS = {
     "data_args": RAW_OUTPUT_DATA_ARGS,
-    "color_map_axis": "row",
     "color_map": COLOR_TABLE_MAP,
+    "color_map_axis": "row",
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
     }
 
@@ -683,7 +683,7 @@ ARCHIVE_SUMMARY_DATA_ARGS = {
     "drop_cols": ("time", "timestamp"),
     "col_conversions": STANDARD_COL_CONVERSIONS,
     "preprocess_fn": lambda full_data: full_data.groupby(
-        full_data.index.date, sort=False),
+        pd.Grouper(level=0, freq="D"), sort=False),
     "output_cols": (
         lambda full_data: full_data["sequence_count"].agg(
             lambda full_data: full_data.diff(1).clip(lower=-1,
@@ -700,7 +700,10 @@ ARCHIVE_SUMMARY_DATA_ARGS = {
         ),
     "sort_rows": False,
     "reset_index": True,
-    "index_tostr": True,
+    "index_postprocess": lambda index_col: [
+        "<a href=/daily?date={idx}>{idx}</a>".format(
+            idx=index_item.date())
+        for index_item in index_col],
     "final_colnames": ["Date", "Rsrt", "NAs", "Vbat", "Pin", "Pout", "Tmax",
                        "Ntrg", "Ncrc", "GByt"],
     "reverse_output": True,
@@ -710,8 +713,8 @@ ARCHIVE_SUMMARY_DATA_ARGS = {
 
 ARCHIVE_SUMMARY_ARGS = {
     "data_args": ARCHIVE_SUMMARY_DATA_ARGS,
-    "color_map_axis": "column",
     "color_map": COLOR_TABLE_MAP_ARCHIVE,
+    "color_map_axis": "column",
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
     }
 
@@ -751,8 +754,8 @@ HISTORY_PLOT_METADATA = {
 
 HISTORY_PLOT_DATA_ARGS = {
     "plot_subplots": HISTORY_PLOT_SUBPLOTS,
-    "time_period": "7D",
-    "decimate": 1,
+    "time_period": "30D",
+    "decimate": 5,
     "col_conversions": STANDARD_COL_CONVERSIONS,
     "round_floats": 3,
     "index_converter": lambda index: index.strftime("%Y-%m-%d %H:%M:%S")
@@ -764,6 +767,7 @@ HISTORY_PLOT_CONTENT_ARGS = {
     "plot_height": 2048,
     "plot_margin": {"l": 0, "r": 0, "b": 0, "t": 0},
     "plot_title": "",
+    "shape_opacity": 0.2,
     "x_variable": "time",
     "xaxis_type": "date",
     "y_gap": 0.1,
@@ -791,7 +795,6 @@ LOG_FULL_METADATA = {
     "button_link": True,
     "button_newtab": "true",
     "button_position": "top",
-    "button_newtab": "true",
     }
 
 LOG_FULL_DATA_ARGS = {
@@ -835,6 +838,89 @@ ARCHIVE_FULL_ARGS = {
     "color_map_axis": "column",
     "color_map": COLOR_TABLE_MAP_ARCHIVE,
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
+    }
+
+
+# --- Daily data page ---
+
+DAILY_PAGE_ARGS = {
+    "filename_template": "hamma_{}.csv",
+    "file_grouper": pd.Grouper(level=0, freq="D"),
+    "output_args": {"index": False},
+    "col_conversions": STANDARD_COL_CONVERSIONS,
+    "sort_rows": False,
+    "round_floats": 3,
+    "reset_index": False,
+    }
+
+
+DAILY_TOP_METADATA = {
+    "section_title": "",
+    "section_description": "",
+    "section_nav_label": "",
+    "button_content": "",
+    "button_type": "",
+    "button_link": "",
+    "button_newtab": "",
+    "button_position": "",
+    }
+
+DAILY_TOP_ARGS = {
+    "data_args": {},
+    "button_left_text": "⬅ Prev Day",
+    "button_right_text": "Next Day ➡",
+    "default_query_params": "{date: new Date().toISOString().split('T')[0]}",
+    }
+
+
+DAILY_PLOT_METADATA = {
+    "section_title": "Daily History Plot",
+    "section_description": (
+        "Plot displaying all the key parameters over the course of the day."),
+    "section_nav_label": "Daily Plot",
+    "button_content": "",
+    "button_type": "",
+    "button_link": "",
+    "button_position": "",
+    "button_newtab": "",
+    }
+
+DAILY_PLOT_DATA_ARGS_OVERRIDE = {
+    "time_period": None,
+    "index_converter": lambda index: index.strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+DAILY_PLOT_ARGS = {
+    "data_args": {**HISTORY_PLOT_DATA_ARGS,
+                  **DAILY_PLOT_DATA_ARGS_OVERRIDE,
+                  "output_path": "hamma_"},
+    "content_args": HISTORY_PLOT_CONTENT_ARGS,
+    "name_map": VARIABLE_NAME_MAP,
+    "layout_map": LAYOUT_MAP,
+    "color_map": COLOR_TABLE_MAP,
+    "extension": "csv",
+    "update_interval_seconds": STATUS_UPDATE_INTERVAL_SLOW_SECONDS,
+    }
+
+
+DAILY_TABLE_METADATA = {
+    "section_title": "Daily Data Table",
+    "section_description": (
+        "Full-resolution daily monitoring data from the Brokkr client."),
+    "section_nav_label": "Full Table",
+    "button_content": "Download Raw CSV",
+    "button_type": "text",
+    "button_link": True,
+    "button_position": "top",
+    "button_newtab": "true",
+    }
+
+DAILY_TABLE_ARGS = {
+    "data_args": {"output_path": "hamma_"},
+    "color_map": COLOR_TABLE_MAP,
+    "color_map_axis": "column",
+    "extension": "csv",
+    "update_interval_seconds": STATUS_UPDATE_INTERVAL_SLOW_SECONDS,
     }
 
 
@@ -884,6 +970,24 @@ ARCHIVE_PAGE_BLOCKS = {
         },
     }
 
+DAILY_PAGE_BLOCKS = {
+    "dailytop": {
+        "type": "dynamic",
+        "metadata": DAILY_TOP_METADATA,
+        "args": DAILY_TOP_ARGS,
+        },
+    "dailyplot": {
+        "type": "plot",
+        "metadata": DAILY_PLOT_METADATA,
+        "args": DAILY_PLOT_ARGS,
+        },
+    "dailytable": {
+        "type": "table",
+        "metadata": DAILY_TABLE_METADATA,
+        "args": DAILY_TABLE_ARGS,
+        },
+    }
+
 
 CONTENT_PAGES = {
     "": {
@@ -897,5 +1001,10 @@ CONTENT_PAGES = {
     "archive": {
         "type": "singlepage",
         "blocks": ARCHIVE_PAGE_BLOCKS,
+        },
+    "daily": {
+        "type": "daily",
+        "blocks": DAILY_PAGE_BLOCKS,
+        "args": DAILY_PAGE_ARGS,
         },
     }

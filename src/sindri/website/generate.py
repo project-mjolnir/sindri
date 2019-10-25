@@ -31,7 +31,8 @@ BUILDINFO_DATABAG_PATH = DATABAG_PATH / "buildinfo.json"
 LEKTOR_ICON_VERSION_PATH = THEME_PATH / "lektor-icon" / "_version.txt"
 
 LASTUPDATE_FILENAME = "{section_id}_lastupdate.json"
-DATA_FILENAME = "{section_id}_data.json"
+DATA_FILENAME = "{section_id}_data.{extension}"
+DEFAULT_EXTENSION = "json"
 LOGFILE_NAME = "brokkr.log"
 
 SENTINEL_VALUE_JSON = -999
@@ -126,6 +127,56 @@ def check_update(input_path, lastupdate_path):
     return True
 
 
+def process_tabular_data(
+        full_data,
+        time_period=None, drop_cols=None, decimate=None,
+        col_conversions=None, preprocess_fn=None,
+        output_cols=None, sort_rows=False,
+        round_floats=None, reset_index=False, index_postprocess=False,
+        final_colnames=None, reverse_output=False
+        ):
+    if time_period:
+        full_data = full_data.last(time_period)
+    full_data = full_data.copy()
+    if decimate and decimate > 1:
+        full_data = full_data.iloc[::decimate, :]
+    if drop_cols:
+        full_data = full_data.drop(list(drop_cols), axis=1, errors="ignore")
+
+    if col_conversions:
+        for var_name, (factor, n_digits) in col_conversions.items():
+            full_data[var_name] = round(full_data[var_name] * factor, n_digits)
+
+    if preprocess_fn:
+        full_data = preprocess_fn(full_data)
+
+    if output_cols is None:
+        output_data = full_data
+    elif callable(output_cols[0]):
+        output_data = pd.concat((col_fn(full_data) for col_fn in output_cols),
+                                axis=1, sort=sort_rows)
+    else:
+        output_data = full_data[[col for col in output_cols]]
+
+    if round_floats:
+        output_data = round(output_data, round_floats)
+    index_name = output_data.index.name if output_data.index.name else "index"
+    if reset_index:
+        output_data.reset_index(inplace=True)
+    if index_postprocess:
+        if reset_index:
+            output_data[index_name] = index_postprocess(
+                output_data[index_name])
+        else:
+            output_data.index = index_postprocess(output_data.index)
+    if final_colnames:
+        output_data.columns = list(final_colnames)
+    if reverse_output:
+        output_data = output_data.iloc[::-1, :]
+
+    return output_data
+
+
 def get_dashboard_plot_data(full_data, plot_type, **kwargs):
     if not plot_type:
         return None
@@ -194,36 +245,11 @@ def generate_dashboard_data(
 
 
 def generate_table_data(
-        full_data, output_cols,
-        time_period=None, drop_cols=None,
-        col_conversions=None, preprocess_fn=None, sort_rows=False,
-        reset_index=True, index_tostr=False, final_colnames=None,
-        reverse_output=False, output_args=None, output_path=None,
-        ):
-    if time_period:
-        full_data = full_data.last(time_period)
-    full_data = full_data.copy()
-    if drop_cols:
-        full_data = full_data.drop(list(drop_cols), axis=1, errors="ignore")
+        full_data, output_cols=None, output_args=None, output_path=None,
+        **table_process_args):
 
-    if col_conversions:
-        for var_name, (factor, n_digits) in col_conversions.items():
-            full_data[var_name] = round(full_data[var_name] * factor, n_digits)
-
-    if preprocess_fn:
-        full_data = preprocess_fn(full_data)
-
-    table_data = pd.concat(tuple(col_fn(full_data) for col_fn in output_cols),
-                           axis=1, sort=sort_rows)
-
-    if index_tostr:
-        table_data.index = table_data.index.astype("str")
-    if reset_index:
-        table_data.reset_index(inplace=True)
-    if final_colnames:
-        table_data.columns = list(final_colnames)
-    if reverse_output:
-        table_data = table_data.iloc[::-1, :]
+    table_data = process_tabular_data(
+        full_data=full_data, output_cols=output_cols, **table_process_args)
 
     if output_path:
         if output_args is None:
@@ -261,25 +287,12 @@ def generate_text_data(
 
 
 def generate_plot_data(
-        full_data, plot_subplots, time_period=None, decimate=None,
-        col_conversions=None, round_floats=None, reverse_output=False,
-        index_converter=None, output_path=None,
-        ):
-    if time_period:
-        full_data = full_data.last(time_period)
-    if decimate and decimate > 1:
-        full_data = full_data.iloc[::decimate, :]
-    if col_conversions:
-        full_data = full_data.copy()
-        for var_name, (factor, n_digits) in col_conversions.items():
-            full_data[var_name] = round(full_data[var_name] * factor, n_digits)
+        full_data, plot_subplots=None, index_converter=None, output_path=None,
+        **table_process_args):
 
-    plot_data = full_data[[col for col in plot_subplots]]
-
-    if round_floats:
-        plot_data = round(plot_data, round_floats)
-    if reverse_output:
-        plot_data = plot_data.iloc[::-1, :]
+    plot_data = process_tabular_data(
+        full_data=full_data, output_cols=list(plot_subplots.keys()),
+        **table_process_args)
 
     if output_path:
         plot_data_json = (plot_data.replace({np.nan: None})
@@ -296,13 +309,8 @@ def generate_plot_data(
     return plot_data
 
 
-def generate_singlepage_data(page_blocks, full_data=None,
-                             page_path="", project_path=None):
-    if project_path:
-        full_path = Path(project_path) / ASSET_PATH / page_path
-    else:
-        full_path = Path() / page_path
-    os.makedirs(full_path, exist_ok=True)
+def generate_singlepage_data(page_blocks, full_data,
+                             input_path=None, output_path=None):
     data_function_map = {
         "dashboard": generate_dashboard_data,
         "table": generate_table_data,
@@ -310,41 +318,87 @@ def generate_singlepage_data(page_blocks, full_data=None,
         "plot": generate_plot_data,
         }
 
-    if full_data is None:
-        full_data = sindri.process.ingest_status_data(n_days=None)
-    data_input_path = sindri.process.get_status_data_paths(n_days=-1)[-1]
-
     for section_id, block in page_blocks.items():
-        input_path = Path(block["args"]["data_args"]
-                          .get("input_path", data_input_path)).expanduser()
-        update_needed = check_update(
-            input_path,
-            full_path / (LASTUPDATE_FILENAME.format(
-                section_id=section_id)),
-            )
-        if not update_needed:
+        if block["type"] == "generic":
             continue
+        input_path = Path(block["args"]["data_args"]
+                          .get("input_path", input_path))
+        if input_path is not None and output_path is not None:
+            input_path = input_path.expanduser()
+            update_needed = check_update(
+                input_path,
+                output_path / (LASTUPDATE_FILENAME.format(
+                    section_id=section_id)),
+                )
+            if not update_needed:
+                continue
 
         data_args = copy.deepcopy(block["args"]["data_args"])
         if data_args.get("input_path", None) is not None:
             data_args["input_path"] = input_path
         if data_args.get("output_path", None) is None:
             data_args["output_path"] = DATA_FILENAME.format(
-                section_id=section_id)
+                section_id=section_id, extension=DEFAULT_EXTENSION)
         for data_arg in ("output_path", "output_path_full"):
             if data_args.get(data_arg, None) is not None:
-                data_args[data_arg] = full_path / data_args[data_arg]
+                data_args[data_arg] = output_path / data_args[data_arg]
 
         data_function_map[block["type"]](full_data=full_data, **data_args)
 
 
+def generate_daily_data(
+        page_blocks, full_data, input_path, output_path,
+        filename_template, file_grouper,
+        output_args=None, **table_process_args):
+    if output_args is None:
+        output_args = {}
+
+    for section_id in page_blocks:
+        if page_blocks[section_id]["type"] == "generic":
+            continue
+        update_needed = check_update(
+            input_path,
+            output_path / (LASTUPDATE_FILENAME.format(section_id=section_id)))
+        if not update_needed:
+            continue
+    if not update_needed:
+        return
+
+    output_data = process_tabular_data(full_data, **table_process_args)
+
+    output_data_grouped = output_data.groupby(file_grouper, sort=False)
+    for group in output_data_grouped.groups:
+        group_data = output_data_grouped.get_group(group)
+        filename = filename_template.format(group.date())
+        group_data.to_csv(output_path / filename, line_terminator="\n",
+                          **output_args)
+
+
 def generate_site_data(content_pages, project_path=None):
     full_data = sindri.process.ingest_status_data(n_days=None)
+    input_path = sindri.process.get_status_data_paths(n_days=1)[0]
+    if project_path:
+        project_path = Path(project_path) / ASSET_PATH
+    else:
+        project_path = Path()
+
     for path, page in content_pages.items():
-        if page["type"] == "singlepage":
+        output_path = project_path / path
+        os.makedirs(output_path, exist_ok=True)
+        if page["type"] is None:
+            continue
+        elif page["type"] == "singlepage":
             generate_singlepage_data(
-                page["blocks"], full_data=full_data,
-                page_path=path, project_path=project_path)
+                page_blocks=page["blocks"], full_data=full_data,
+                input_path=input_path, output_path=output_path)
+        elif page["type"] == "daily":
+            generate_daily_data(
+                page_blocks=page["blocks"], full_data=full_data,
+                input_path=input_path, output_path=output_path, **page["args"])
+        else:
+            raise ValueError(
+                "Page type must be one of {None, 'singlepage', 'daily'}, "
+                f"not {page['type']} for page at path {path}")
 
 
 def lookup_in_map(param, param_map):
@@ -384,6 +438,34 @@ def generate_steps(plot, color_map=None):
         *steps, endpoints=[-1e9, 1e9],
         template_string=sindri.website.templates.GAUGE_PLOT_STEPS_TEMPLATE)
     return " ".join(step_strings)
+
+
+def generate_generic_block(
+        block_metadata, section_id, content,
+        data_args=None, data_path=None, lastupdate_path=None):
+    generic_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
+        content=content,
+        full_width="true",
+        section_id=section_id,
+        **block_metadata,
+        )
+    return generic_block
+
+
+def generate_dynamic_block(
+        default_query_params, button_left_text, button_right_text,
+        section_id, **generic_args):
+    query_param_parser = sindri.website.templates.QUERY_PARAM_PARSER.format(
+        default_query_params=default_query_params)
+    content_block = sindri.website.templates.DYNAMIC_PAGE_TOP_SECTION.format(
+        section_id=section_id,
+        query_param_parser=query_param_parser,
+        button_left_text=button_left_text,
+        button_right_text=button_right_text,
+        )
+    dynamic_block = generate_generic_block(
+        content=content_block, section_id=section_id, **generic_args)
+    return dynamic_block
 
 
 def generate_dashboard_block(
@@ -436,16 +518,23 @@ def generate_table_block(
         data_path, lastupdate_path,
         color_map="{}",
         color_map_axis="column",
+        extension=DEFAULT_EXTENSION,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         ):
-    if block_metadata["button_link"] is True:
-        block_metadata["button_link"] = data_path
+    final_colnames = data_args.get("final_colnames", None)
+    if final_colnames is not None:
+        final_colnames = list(final_colnames)
+    else:
+        final_colnames = []
+    data_path = Path(data_path).stem
+
     table_content = sindri.website.templates.TABLE_CONTENT_TEMPLATE.format(
         section_id=section_id,
         color_map=color_map,
         color_map_axis=color_map_axis,
-        final_colnames=list(data_args["final_colnames"]),
+        final_colnames=final_colnames,
         data_path=data_path,
+        extension=extension,
         lastupdate_path=lastupdate_path,
         update_interval_seconds=update_interval_seconds,
         )
@@ -486,6 +575,7 @@ def generate_plot_block(
         block_metadata, section_id, data_args, content_args,
         data_path, lastupdate_path,
         name_map=None, layout_map=None, color_map=None,
+        extension=DEFAULT_EXTENSION,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SLOW_SECONDS,
         ):
     if block_metadata["button_link"] is True:
@@ -494,9 +584,9 @@ def generate_plot_block(
     subplot_items = []
     yaxis_items = []
     shape_items = []
+    data_path = Path(data_path).stem
 
-    for idx, (subplot_variable, subplot_params) in enumerate(
-            data_args["plot_subplots"].items()):
+    for idx, subplot_variable in enumerate(data_args["plot_subplots"]):
         idx_string = str(idx + 1) if idx else ""
         idx_strings.append(idx_string)
         layout_args = lookup_in_map(subplot_variable, layout_map)
@@ -526,14 +616,15 @@ def generate_plot_block(
         yaxis_items.append(subplot_yaxis)
 
         if color_map and color_map.get(subplot_variable, None):
-            step_strings = generate_step_strings(
+            shape_strings = generate_step_strings(
                 color_map[subplot_variable][0],
                 color_map[subplot_variable][1],
                 endpoints=layout_args["range"],
                 template_string=sindri.website.templates.SHAPE_RANGE_TEMPLATE,
                 idx=idx_string,
+                shape_opacity=content_args["shape_opacity"],
                 )
-            shape_items = shape_items + list(step_strings)
+            shape_items = shape_items + list(shape_strings)
 
     plot_content = sindri.website.templates.PLOT_CONTENT_TEMPLATE.format(
         section_id=section_id,
@@ -543,6 +634,7 @@ def generate_plot_block(
         y_axes="\n".join(yaxis_items),
         shape_list="\n".join(shape_items),
         data_path=data_path,
+        extension=extension,
         lastupdate_path=lastupdate_path,
         update_interval_seconds=update_interval_seconds,
         **content_args,
@@ -560,6 +652,8 @@ def generate_plot_block(
 def generate_singlepage_content(page_blocks):
     rendered_blocks = []
     block_function_map = {
+        "generic": generate_generic_block,
+        "dynamic": generate_dynamic_block,
         "dashboard": generate_dashboard_block,
         "table": generate_table_block,
         "text": generate_text_block,
@@ -568,10 +662,15 @@ def generate_singlepage_content(page_blocks):
 
     for section_id, block in page_blocks.items():
         if block["args"]["data_args"].get("output_path", None) is None:
-            data_path = DATA_FILENAME.format(section_id=section_id)
+            extension = block["args"].get("extension", DEFAULT_EXTENSION)
+            data_path = DATA_FILENAME.format(
+                section_id=section_id, extension=extension)
         else:
             data_path = block["args"]["data_args"]["output_path"]
         lastupdate_path = LASTUPDATE_FILENAME.format(section_id=section_id)
+        if block["metadata"].get("button_link", None) is True:
+            block["metadata"]["button_link"] = data_path
+
         rendered_block = block_function_map[block["type"]](
                 block_metadata=block["metadata"],
                 section_id=section_id,
@@ -664,7 +763,7 @@ def generate_site_content(content_pages, project_path=None):
 
     page_contents = {}
     for path, page in content_pages.items():
-        if page["type"] == "singlepage":
+        if page["type"] in {"singlepage", "daily"}:
             page_content = generate_singlepage_content(page["blocks"])
         else:
             raise ValueError(
