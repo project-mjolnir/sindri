@@ -72,7 +72,7 @@ def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
     files_to_load = get_status_data_paths(
         n_days=n_days, lag=lag, data_dir=data_dir, glob_pattern=glob_pattern)
     status_data = pd.concat(
-        [pd.read_csv(file) for file in files_to_load],
+        (pd.read_csv(file) for file in files_to_load),
         ignore_index=True, sort=False)
     return status_data
 
@@ -93,8 +93,9 @@ def preprocess_status_data(raw_status_data, decimate=None,
         status_data = raw_status_data.iloc[::decimate, :]
     else:
         status_data = raw_status_data
-    status_data["time"] = pd.to_datetime(status_data["time"])
-    status_data["timestamp"] = pd.to_datetime(status_data["timestamp"])
+    status_data["time"] = pd.to_datetime(status_data["time"],
+                                         format="%Y-%m-%d %H:%M:%S.%f")
+    status_data.drop("timestamp", inplace=True, axis=1, errors="ignore")
     status_data.set_index("time", drop=False, inplace=True)
 
     status_data = calculate_columns(

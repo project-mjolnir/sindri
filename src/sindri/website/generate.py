@@ -204,7 +204,7 @@ def generate_table_data(
         full_data = full_data.last(time_period)
     full_data = full_data.copy()
     if drop_cols:
-        full_data = full_data.drop(list(drop_cols), axis=1)
+        full_data = full_data.drop(list(drop_cols), axis=1, errors="ignore")
 
     if col_conversions:
         for var_name, (factor, n_digits) in col_conversions.items():
