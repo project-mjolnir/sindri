@@ -25,8 +25,8 @@ CONTENT_PATH = Path("content")
 ASSET_PATH = Path("assets")
 THEME_PATH = Path("themes")
 DATABAG_PATH = Path("databags")
+CONTENT_FILENAME = "contents.lr"
 
-MAINPAGE_PATH = CONTENT_PATH / "contents.lr"
 BUILDINFO_DATABAG_PATH = DATABAG_PATH / "buildinfo.json"
 LEKTOR_ICON_VERSION_PATH = THEME_PATH / "lektor-icon" / "_version.txt"
 
@@ -170,7 +170,10 @@ def get_dashboard_plot_data(full_data, plot_type, **kwargs):
     return plot_data
 
 
-def generate_dashboard_data(full_data, dashboard_plots, output_path=None):
+def generate_dashboard_data(
+        full_data, dashboard_plots,
+        output_path=None,
+        ):
     dashboard_data = {}
     for plot_id, plot in dashboard_plots.items():
         if plot["plot_type"]:
@@ -229,7 +232,9 @@ def generate_table_data(
 
 
 def generate_text_data(
-        input_path, output_path=None, output_path_full=None, n_lines=None):
+        input_path,
+        full_data=None, output_path=None, output_path_full=None, n_lines=None,
+        ):
     if output_path is None:
         output_path = output_path_full
 
@@ -256,7 +261,8 @@ def generate_text_data(
 def generate_plot_data(
         full_data, plot_subplots, time_period=None, decimate=None,
         col_conversions=None, round_floats=None,
-        index_converter=None, output_path=None):
+        index_converter=None, output_path=None,
+        ):
     if time_period:
         full_data = full_data.last(time_period)
     if decimate and decimate > 1:
@@ -286,47 +292,51 @@ def generate_plot_data(
     return plot_data
 
 
-def generate_data(mainpage_blocks, project_path=None):
+def generate_singlepage_data(page_blocks, page_path="", project_path=None):
     if project_path:
-        project_path = Path(project_path) / ASSET_PATH
+        full_path = Path(project_path) / ASSET_PATH / page_path
     else:
-        project_path = Path()
+        full_path = Path() / page_path
+    os.makedirs(full_path, exist_ok=True)
+    data_function_map = {
+        "dashboard": generate_dashboard_data,
+        "table": generate_table_data,
+        "text": generate_text_data,
+        "plot": generate_plot_data,
+        }
 
     full_data = sindri.process.ingest_status_data(n_days=32)
     data_input_path = sindri.process.get_status_data_paths(n_days=-1)[-1]
 
-    for block_type, block_metadata, block_args in mainpage_blocks:
-        input_path = Path(block_args["data_args"]
+    for section_id, block in page_blocks.items():
+        input_path = Path(block["args"]["data_args"]
                           .get("input_path", data_input_path)).expanduser()
         update_needed = check_update(
             input_path,
-            project_path / (LASTUPDATE_FILENAME.format(
-                section_id=block_metadata["section_id"])),
+            full_path / (LASTUPDATE_FILENAME.format(
+                section_id=section_id)),
             )
         if not update_needed:
             continue
 
-        data_args = copy.deepcopy(block_args["data_args"])
+        data_args = copy.deepcopy(block["args"]["data_args"])
         if data_args.get("input_path", None) is not None:
             data_args["input_path"] = input_path
         if data_args.get("output_path", None) is None:
             data_args["output_path"] = DATA_FILENAME.format(
-                section_id=block_metadata["section_id"])
+                section_id=section_id)
         for data_arg in ("output_path", "output_path_full"):
             if data_args.get(data_arg, None) is not None:
-                data_args[data_arg] = project_path / data_args[data_arg]
+                data_args[data_arg] = full_path / data_args[data_arg]
 
-        if block_type == "dashboard":
-            generate_dashboard_data(full_data=full_data.last("27H"),
-                                    **data_args)
-        elif block_type == "table":
-            generate_table_data(full_data=full_data, **data_args)
-        elif block_type == "text":
-            generate_text_data(**data_args)
-        elif block_type == "plot":
-            generate_plot_data(full_data=full_data,
-                               plot_subplots=block_args["plot_subplots"],
-                               **data_args)
+        data_function_map[block["type"]](full_data=full_data, **data_args)
+
+
+def generate_site_data(content_pages, project_path=None):
+    for path, page in content_pages.items():
+        if page["type"] == "singlepage":
+            generate_singlepage_data(
+                page["blocks"], page_path=path, project_path=project_path)
 
 
 def lookup_in_map(param, param_map):
@@ -369,10 +379,8 @@ def generate_steps(plot, color_map=None):
 
 
 def generate_dashboard_block(
-        block_metadata,
-        data_args,
-        layout_map=None,
-        color_map=None,
+        block_metadata, section_id, data_args,
+        layout_map=None, color_map=None,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         update_interval_fast_seconds=STATUS_UPDATE_INTERVAL_FAST_SECONDS,
         ):
@@ -397,44 +405,49 @@ def generate_dashboard_block(
     widgets = "\n".join(widget_blocks)
     update_script = sindri.website.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
         sentinel_value_json=SENTINEL_VALUE_JSON,
-        section_id=block_metadata["section_id"],
+        section_id=section_id,
         all_plots="\n".join(all_plots),
-        data_path=DATA_FILENAME.format(
-            section_id=block_metadata["section_id"]),
-        lastupdate_path=LASTUPDATE_FILENAME.format(
-            section_id=block_metadata["section_id"]),
+        data_path=DATA_FILENAME.format(section_id=section_id),
+        lastupdate_path=LASTUPDATE_FILENAME.format(section_id=section_id),
         update_interval_seconds=update_interval_seconds,
         fast_update_plots=fast_update_plots,
         update_interval_fast_seconds=update_interval_fast_seconds,
         )
     dashboard_block = (sindri.website.templates.DASHBOARD_SECTION_TEMPLATE
-                       .format(widgets=widgets, update_script=update_script,
-                               **block_metadata))
+                       .format(widgets=widgets,
+                               update_script=update_script,
+                               section_id=section_id,
+                               **block_metadata,
+                               ))
     return dashboard_block
 
 
 def generate_table_block(
-        block_metadata, data_args, color_map, axis_name,
-        update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS):
+        block_metadata, section_id, data_args,
+        color_map="{}",
+        color_map_axis="column",
+        update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
+        ):
     table_content = sindri.website.templates.TABLE_CONTENT_TEMPLATE.format(
-        section_id=block_metadata["section_id"],
+        section_id=section_id,
         color_map=color_map,
-        axis_name=axis_name,
+        color_map_axis=color_map_axis,
         final_colnames=list(data_args["final_colnames"]),
-        data_path=DATA_FILENAME.format(
-            section_id=block_metadata["section_id"]),
-        lastupdate_path=LASTUPDATE_FILENAME.format(
-            section_id=block_metadata["section_id"]),
+        data_path=DATA_FILENAME.format(section_id=section_id),
+        lastupdate_path=LASTUPDATE_FILENAME.format(section_id=section_id),
         update_interval_seconds=update_interval_seconds,
         )
     table_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
-        content=table_content, full_width="true", **block_metadata)
+        content=table_content,
+        full_width="true",
+        section_id=section_id,
+        **block_metadata,
+        )
     return table_block
 
 
 def generate_text_block(
-        block_metadata,
-        data_args,
+        block_metadata, section_id, data_args,
         replace_items="[]",
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         ):
@@ -448,21 +461,24 @@ def generate_text_block(
         text_path = data_args["output_path"]
 
     text_content = sindri.website.templates.TEXT_CONTENT_TEMPLATE.format(
-        section_id=block_metadata["section_id"],
+        section_id=section_id,
         replace_items=replace_items,
         text_path=text_path,
-        lastupdate_path=LASTUPDATE_FILENAME.format(
-            section_id=block_metadata["section_id"]),
+        lastupdate_path=LASTUPDATE_FILENAME.format(section_id=section_id),
         update_interval_seconds=update_interval_seconds,
         )
     text_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
-        content=text_content, button_link=text_path_full, full_width="true",
-        **block_metadata)
+        content=text_content,
+        button_link=text_path_full,
+        full_width="true",
+        section_id=section_id,
+        **block_metadata,
+        )
     return text_block
 
 
 def generate_plot_block(
-        block_metadata, data_args, content_args, plot_subplots,
+        block_metadata, section_id, data_args, content_args,
         name_map=None, layout_map=None, color_map=None,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SLOW_SECONDS,
         ):
@@ -471,7 +487,7 @@ def generate_plot_block(
     yaxis_items = []
     shape_items = []
     for idx, (subplot_variable, subplot_params) in enumerate(
-            plot_subplots.items()):
+            data_args["plot_subplots"].items()):
         idx_string = str(idx + 1) if idx else ""
         idx_strings.append(idx_string)
         layout_args = lookup_in_map(subplot_variable, layout_map)
@@ -511,47 +527,49 @@ def generate_plot_block(
             shape_items = shape_items + list(step_strings)
 
     plot_content = sindri.website.templates.PLOT_CONTENT_TEMPLATE.format(
-        section_id=block_metadata["section_id"],
+        section_id=section_id,
         sentinel_value_json=SENTINEL_VALUE_JSON,
         sub_plots="\n".join(subplot_items),
         subplots_list=", ".join(["'[xy{}]'".format(n) for n in idx_strings]),
         y_axes="\n".join(yaxis_items),
         shape_list="\n".join(shape_items),
-        data_path=DATA_FILENAME.format(
-            section_id=block_metadata["section_id"]),
-        lastupdate_path=LASTUPDATE_FILENAME.format(
-            section_id=block_metadata["section_id"]),
+        data_path=DATA_FILENAME.format(section_id=section_id),
+        lastupdate_path=LASTUPDATE_FILENAME.format(section_id=section_id),
         update_interval_seconds=update_interval_seconds,
         **content_args,
         )
 
     plot_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
-        content=plot_content, full_width="true", **block_metadata)
+        content=plot_content,
+        full_width="true",
+        section_id=section_id,
+        **block_metadata,
+        )
     return plot_block
 
 
-def generate_mainfile_content(mainpage_blocks):
+def generate_singlepage_content(page_blocks):
     rendered_blocks = []
-    for block_type, block_metadata, block_args in mainpage_blocks:
-        if block_type == "dashboard":
-            rendered_block = generate_dashboard_block(
-                block_metadata=block_metadata, **block_args)
-        elif block_type == "table":
-            rendered_block = generate_table_block(block_metadata, **block_args)
-        elif block_type == "text":
-            rendered_block = generate_text_block(block_metadata, **block_args)
-        elif block_type == "plot":
-            rendered_block = generate_plot_block(block_metadata, **block_args)
-        else:
-            raise ValueError("Block type must be one of "
-                             "{'dashboard', 'table', 'text', 'plot'}")
+    block_function_map = {
+        "dashboard": generate_dashboard_block,
+        "table": generate_table_block,
+        "text": generate_text_block,
+        "plot": generate_plot_block,
+        }
+
+    for section_id, block in page_blocks.items():
+        rendered_block = block_function_map[block["type"]](
+                block_metadata=block["metadata"],
+                section_id=section_id,
+                **block["args"],
+                )
         rendered_blocks.append(rendered_block)
-    mainfile_content = (sindri.website.templates.MAINPAGE_SENSOR_TEMPLATE
-                        .format(main_content="\n".join(rendered_blocks)))
-    return mainfile_content
+    page_content = (sindri.website.templates.SINGLEPAGE_TEMPLATE
+                    .format(content_blocks="\n".join(rendered_blocks)))
+    return page_content
 
 
-def generate_build_info(project_path=None):
+def generate_build_info(project_path=None, output_path=BUILDINFO_DATABAG_PATH):
     if project_path is None:
         project_path = Path()
 
@@ -612,20 +630,52 @@ def generate_build_info(project_path=None):
     build_info_string = "<br>".join((version_string_combined, time_string))
     build_info = {"buildinfo": build_info_string}
 
+    if output_path:
+        os.makedirs((project_path / output_path).parent, exist_ok=True)
+        write_data_json(build_info, project_path / output_path)
+
     return build_info
 
 
-def generate_content(mainpage_blocks, project_path=None):
+def generate_site_content(content_pages, project_path=None):
     if project_path is None:
         project_path = Path()
     else:
         project_path = Path(project_path)
 
-    build_info = generate_build_info(project_path=project_path)
-    os.makedirs((project_path / BUILDINFO_DATABAG_PATH).parent, exist_ok=True)
-    write_data_json(build_info, project_path / BUILDINFO_DATABAG_PATH)
+    generate_build_info(project_path=project_path,
+                        output_path=project_path / BUILDINFO_DATABAG_PATH)
 
-    mainfile_content = generate_mainfile_content(mainpage_blocks)
-    with open(project_path / MAINPAGE_PATH, "w",
-              encoding="utf-8", newline="\n") as main_file:
-        main_file.write(mainfile_content)
+    page_contents = {}
+    for path, page in content_pages.items():
+        if page["type"] == "singlepage":
+            page_content = generate_singlepage_content(page["blocks"])
+        else:
+            raise ValueError(
+                f"Page type for {path} must be one of {{'singlepage'}}",
+                f"not {page['type']}")
+        page_contents[path] = page_content
+
+    return page_contents
+
+
+def write_site_content(page_contents, project_path=None):
+    if project_path is None:
+        project_path = Path()
+    else:
+        project_path = Path(project_path)
+
+    for path, content in page_contents.items():
+        content_fullpath = project_path / CONTENT_PATH / path
+        os.makedirs(content_fullpath, exist_ok=True)
+        with open(content_fullpath / CONTENT_FILENAME, "w",
+                  encoding="utf-8", newline="\n") as content_file:
+            content_file.write(content)
+
+
+def generate_and_write_site_content(content_pages, project_path=None):
+    page_contents = generate_site_content(
+        content_pages, project_path=project_path)
+    write_site_content(
+        page_contents, project_path=project_path)
+    return page_contents

@@ -14,7 +14,7 @@ from sindri.website.templates import (
     GAUGE_PLOT_UPDATE_CODE,
     GAUGE_PLOT_UPDATE_CODE_VALUE,
     GAUGE_PLOT_UPDATE_CODE_COLOR,
-)
+    )
 
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
@@ -29,7 +29,7 @@ STANDARD_COL_CONVERSIONS = {
     "bytes_read": (1 / 1e9, 2),
     "bytes_written": (1 / 1e9, 2),
     "bytes_remaining": (1 / 1e9, 2),
-}
+    }
 
 
 # --- Pretty-print name map ---
@@ -565,7 +565,6 @@ STATUS_DASHBOARD_PLOTS = {
     }
 
 STATUS_DASHBOARD_METADATA = {
-    "section_id": "status",
     "section_title": "Status Dashboard",
     "section_description": (
         "Real-time status of this HAMMA sensor and the Mjolnir system."),
@@ -574,7 +573,7 @@ STATUS_DASHBOARD_METADATA = {
 
 STATUS_DASHBOARD_DATA_ARGS = {
     "dashboard_plots": STATUS_DASHBOARD_PLOTS,
-}
+    }
 
 STATUS_DASHBOARD_ARGS = {
     "data_args": STATUS_DASHBOARD_DATA_ARGS,
@@ -589,7 +588,6 @@ STATUS_DASHBOARD_ARGS = {
 # --- Raw data output table section ---
 
 RAW_OUTPUT_METADATA = {
-    "section_id": "raw",
     "section_title": "Raw Output Data",
     "section_description": (
         "Raw current and 24-hour max/mean/min Brokkr output data."),
@@ -616,11 +614,11 @@ RAW_OUTPUT_DATA_ARGS = {
     "final_colnames": ["Variable", "Now", "Min", "Max", "Avg"],
     "output_args": {
         "double_precision": 3, "date_format": "iso", "date_unit": "ms"},
-}
+    }
 
 RAW_OUTPUT_ARGS = {
     "data_args": RAW_OUTPUT_DATA_ARGS,
-    "axis_name": "row",
+    "color_map_axis": "row",
     "color_map": COLOR_TABLE_MAP,
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
     }
@@ -637,7 +635,6 @@ LOG_REPLACE_ITEMS = [
     ]
 
 LOG_METADATA = {
-    "section_id": "log",
     "section_title": "Client Log",
     "section_description": (
         "Latest log entries from this sensor's Brokkr client."),
@@ -665,7 +662,6 @@ LOG_ARGS = {
 # --- Archive data table section ---
 
 ARCHIVE_METADATA = {
-    "section_id": "archive",
     "section_title": "Data Archive",
     "section_description": (
         "Summary of archival status data from the last 30 days."),
@@ -704,11 +700,11 @@ ARCHIVE_DATA_ARGS = {
                        "Ntrg", "Ncrc", "Gbyt"],
     "output_args": {
         "double_precision": 1, "date_format": "iso", "date_unit": "s"},
-}
+    }
 
 ARCHIVE_ARGS = {
     "data_args": ARCHIVE_DATA_ARGS,
-    "axis_name": "column",
+    "color_map_axis": "column",
     "color_map": COLOR_TABLE_MAP_ARCHIVE,
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
     }
@@ -734,10 +730,9 @@ HISTORY_PLOT_SUBPLOTS = {
     "crc_errors_daily": {},
     "bytes_written": {},
     "triggers_remaining": {},
-}
+    }
 
 HISTORY_PLOT_METADATA = {
-    "section_id": "plots",
     "section_title": "History Plot",
     "section_description": "Plots of recorded data over time.",
     "section_nav_label": "Plots",
@@ -749,12 +744,13 @@ HISTORY_PLOT_METADATA = {
     }
 
 HISTORY_PLOT_DATA_ARGS = {
+    "plot_subplots": HISTORY_PLOT_SUBPLOTS,
     "time_period": "7D",
     "decimate": 1,
     "col_conversions": STANDARD_COL_CONVERSIONS,
     "round_floats": 3,
     "index_converter": lambda index: index.strftime("%Y-%m-%d %H:%M:%S")
-}
+    }
 
 HISTORY_PLOT_CONTENT_ARGS = {
     "plot_bgcolor": THEME_BG_ACCENT_COLOR,
@@ -770,7 +766,6 @@ HISTORY_PLOT_CONTENT_ARGS = {
 HISTORY_PLOT_ARGS = {
     "data_args": HISTORY_PLOT_DATA_ARGS,
     "content_args": HISTORY_PLOT_CONTENT_ARGS,
-    "plot_subplots": HISTORY_PLOT_SUBPLOTS,
     "name_map": VARIABLE_NAME_MAP,
     "layout_map": LAYOUT_MAP,
     "color_map": COLOR_TABLE_MAP,
@@ -778,12 +773,40 @@ HISTORY_PLOT_ARGS = {
     }
 
 
-# --- Mainpage blocks ---
+# --- Page and site assembly ---
 
-MAINPAGE_BLOCKS = (
-    ("dashboard", STATUS_DASHBOARD_METADATA, STATUS_DASHBOARD_ARGS),
-    ("table", RAW_OUTPUT_METADATA, RAW_OUTPUT_ARGS),
-    ("plot", HISTORY_PLOT_METADATA, HISTORY_PLOT_ARGS),
-    ("text", LOG_METADATA, LOG_ARGS),
-    ("table", ARCHIVE_METADATA, ARCHIVE_ARGS),
-    )
+SENSOR_PAGE_BLOCKS = {
+    "status": {
+        "type": "dashboard",
+        "metadata": STATUS_DASHBOARD_METADATA,
+        "args": STATUS_DASHBOARD_ARGS,
+        },
+    "raw": {
+        "type": "table",
+        "metadata": RAW_OUTPUT_METADATA,
+        "args": RAW_OUTPUT_ARGS,
+        },
+    "plot": {
+        "type": "plot",
+        "metadata": HISTORY_PLOT_METADATA,
+        "args": HISTORY_PLOT_ARGS,
+        },
+    "log": {
+        "type": "text",
+        "metadata": LOG_METADATA,
+        "args": LOG_ARGS,
+        },
+    "archive": {
+        "type": "table",
+        "metadata": ARCHIVE_METADATA,
+        "args": ARCHIVE_ARGS,
+        },
+    }
+
+
+CONTENT_PAGES = {
+    "": {
+        "type": "singlepage",
+        "blocks": SENSOR_PAGE_BLOCKS,
+        },
+    }

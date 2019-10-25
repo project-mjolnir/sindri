@@ -3,7 +3,7 @@ Templates and other static data for constructing the Mjolnir status website.
 """
 
 
-MAINPAGE_SENSOR_TEMPLATE = """
+SINGLEPAGE_TEMPLATE = """
 _model: single-layout
 ---
 
@@ -20,7 +20,7 @@ starting_block_bg: dark
 
 main_content:
 
-{main_content}
+{content_blocks}
 ---
 
 """
@@ -286,12 +286,12 @@ function getColor_{section_id}(dataValue) {{
     if (dataValue.value == null) {{
         return "table-cell-null";
     }};
-    if (! colorMap_{section_id}.hasOwnProperty(dataValue.{axis_name})) {{
+    if (! colorMap_{section_id}.hasOwnProperty(dataValue.{color_map_axis})) {{
         return "table-cell-nocolor";
     }};
     var colorScale = Plotly.d3.scale.threshold()
-    .domain(colorMap_{section_id}[dataValue.{axis_name}][0])
-    .range(colorMap_{section_id}[dataValue.{axis_name}][1]);
+    .domain(colorMap_{section_id}[dataValue.{color_map_axis}][0])
+    .range(colorMap_{section_id}[dataValue.{color_map_axis}][1]);
     return "table-cell-".concat(colorScale(dataValue.value));
 }};
 

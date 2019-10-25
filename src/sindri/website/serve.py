@@ -24,15 +24,15 @@ SOURCE_IGNORE_PATTERNS = (
 
 
 def update_data(project_path=LEKTOR_PROJECT_PATH):
-    sindri.website.generate.generate_data(
-        mainpage_blocks=sindri.config.website.MAINPAGE_BLOCKS,
+    sindri.website.generate.generate_site_data(
+        content_pages=sindri.config.website.CONTENT_PAGES,
         project_path=project_path)
 
 
 def update_project(project_path=LEKTOR_PROJECT_PATH):
     update_data(project_path=project_path)
-    sindri.website.generate.generate_content(
-        mainpage_blocks=sindri.config.website.MAINPAGE_BLOCKS,
+    sindri.website.generate.generate_and_write_site_content(
+        content_pages=sindri.config.website.CONTENT_PAGES,
         project_path=project_path)
 
 
