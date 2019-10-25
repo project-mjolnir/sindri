@@ -451,10 +451,6 @@ def generate_text_block(
         replace_items="[]",
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         ):
-    if data_args["output_path_full"] is None:
-        text_path_full = data_args["output_path"]
-    else:
-        text_path_full = data_args["output_path_full"]
     if data_args["output_path"] is None:
         text_path = data_args["output_path_full"]
     else:
@@ -469,7 +465,6 @@ def generate_text_block(
         )
     text_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
         content=text_content,
-        button_link=text_path_full,
         full_width="true",
         section_id=section_id,
         **block_metadata,

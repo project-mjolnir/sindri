@@ -161,22 +161,6 @@ code.text-content-output {
   }
 }
 
-span.critical {
-  color: red;
-}
-span.error {
-  color: orange;
-}
-span.warning {
-  color: yellow;
-}
-span.info {
-  color: cyan;
-}
-span.debug {
-  color: green;
-}
-
 
 /* Plot object container */
 
@@ -228,5 +212,34 @@ span.debug {
   .full-width .plot-content-container {
     padding-left: 5px;
     padding-right: 5px;
+  }
+}
+
+
+/* Log-specific formatting */
+
+span.critical {
+  color: red;
+}
+span.error {
+  color: orange;
+}
+span.warning {
+  color: yellow;
+}
+span.info {
+  color: cyan;
+}
+span.debug {
+  color: green;
+}
+
+#section-fulllog .text-content-container {
+  max-width: 1080px;
+}
+
+@media screen and (max-width: 1200px) {
+  #section-fulllog .text-content-container {
+    max-width: 864px;
   }
 }

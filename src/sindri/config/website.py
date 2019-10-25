@@ -24,12 +24,24 @@ STATUS_UPDATE_INTERVAL_SLOW_SECONDS = 20
 THEME_FG_COLOR = "white"
 THEME_BG_ACCENT_COLOR = "#333333"
 
+
+# --- Common items ---
+
 STANDARD_COL_CONVERSIONS = {
     "runtime": (1 / (60 * 60), 2),
     "bytes_read": (1 / 1e9, 2),
     "bytes_written": (1 / 1e9, 2),
     "bytes_remaining": (1 / 1e9, 2),
     }
+
+LOG_REPLACE_ITEMS = [
+    ["CRITICAL", "<span class='log-highlight critical'>CRITICAL</span>"],
+    ["ERROR", "<span class='log-highlight error'>ERROR</span>"],
+    ["WARNING", "<span class='log-highlight warning'>WARNING</span>"],
+    ["INFO", "<span class='log-highlight info'>INFO</span>"],
+    ["DEBUG", "<span class='log-highlight debug'>DEBUG</span>"],
+    ["\\|", "<span class='pipe-colored log-pipe'>|</span>"],
+    ]
 
 
 # --- Pretty-print name map ---
@@ -624,36 +636,28 @@ RAW_OUTPUT_ARGS = {
     }
 
 
-# --- Log section ---
-LOG_REPLACE_ITEMS = [
-    ["CRITICAL", "<span class='log-highlight critical'>CRITICAL</span>"],
-    ["ERROR", "<span class='log-highlight error'>ERROR</span>"],
-    ["WARNING", "<span class='log-highlight warning'>WARNING</span>"],
-    ["INFO", "<span class='log-highlight info'>INFO</span>"],
-    ["DEBUG", "<span class='log-highlight debug'>DEBUG</span>"],
-    ["\\|", "<span class='pipe-colored log-pipe'>|</span>"],
-    ]
+# --- Log summary section ---
 
-LOG_METADATA = {
+LOG_SUMMARY_METADATA = {
     "section_title": "Client Log",
     "section_description": (
         "Latest log entries from this sensor's Brokkr client."),
     "section_nav_label": "Log",
     "button_content": "View Full Log",
     "button_type": "text",
+    "button_link": "log",
     "button_position": "bottom",
     "button_newtab": "false",
     }
 
-LOG_DATA_ARGS = {
+LOG_SUMMARY_DATA_ARGS = {
     "input_path": "~/brokkr.log",
     "output_path": "brokkr_log_latest.txt",
-    "output_path_full": "brokkr_log_full.txt",
     "n_lines": 30,
     }
 
-LOG_ARGS = {
-    "data_args": LOG_DATA_ARGS,
+LOG_SUMMARY_ARGS = {
+    "data_args": LOG_SUMMARY_DATA_ARGS,
     "replace_items": LOG_REPLACE_ITEMS,
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
     }
@@ -773,6 +777,34 @@ HISTORY_PLOT_ARGS = {
     }
 
 
+# --- Full log page ___
+
+LOG_FULL_METADATA = {
+    "section_title": "Full Brokkr Client Log",
+    "section_description": (
+        "All log entries from this sensor's Brokkr client."),
+    "section_nav_label": "Log",
+    "button_content": "Download Raw Log",
+    "button_type": "text",
+    "button_link": "brokkr_log_full.txt",
+    "button_newtab": "true",
+    "button_position": "top",
+    "button_newtab": "true",
+    }
+
+LOG_FULL_DATA_ARGS = {
+    "input_path": "~/brokkr.log",
+    "output_path": "brokkr_log_full.txt",
+    "n_lines": None,
+    }
+
+LOG_FULL_ARGS = {
+    "data_args": LOG_FULL_DATA_ARGS,
+    "replace_items": LOG_REPLACE_ITEMS,
+    "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
+    }
+
+
 # --- Page and site assembly ---
 
 SENSOR_PAGE_BLOCKS = {
@@ -793,8 +825,8 @@ SENSOR_PAGE_BLOCKS = {
         },
     "log": {
         "type": "text",
-        "metadata": LOG_METADATA,
-        "args": LOG_ARGS,
+        "metadata": LOG_SUMMARY_METADATA,
+        "args": LOG_SUMMARY_ARGS,
         },
     "archive": {
         "type": "table",
@@ -803,10 +835,22 @@ SENSOR_PAGE_BLOCKS = {
         },
     }
 
+LOG_PAGE_BLOCKS = {
+    "fulllog": {
+        "type": "text",
+        "metadata": LOG_FULL_METADATA,
+        "args": LOG_FULL_ARGS,
+        },
+    }
+
 
 CONTENT_PAGES = {
     "": {
         "type": "singlepage",
         "blocks": SENSOR_PAGE_BLOCKS,
+        },
+    "log": {
+        "type": "singlepage",
+        "blocks": LOG_PAGE_BLOCKS,
         },
     }
