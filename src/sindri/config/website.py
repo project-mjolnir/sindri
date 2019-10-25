@@ -219,7 +219,7 @@ COLOR_TABLE_MAP_ARCHIVE = {
     "Tmax": STANDARD_COLOR_TABLES["temperature"],
     "Ntrg": STANDARD_COLOR_TABLES["triggers_daily"],
     "Ncrc": STANDARD_COLOR_TABLES["crc_errors"],
-    "Gbyt": STANDARD_COLOR_TABLES["bytes_remaining"],
+    "GByt": STANDARD_COLOR_TABLES["bytes_remaining"],
     }
 
 
@@ -624,6 +624,7 @@ RAW_OUTPUT_DATA_ARGS = {
     "sort_rows": False,
     "reset_index": True,
     "final_colnames": ["Variable", "Now", "Min", "Max", "Avg"],
+    "reverse_output": False,
     "output_args": {
         "double_precision": 3, "date_format": "iso", "date_unit": "ms"},
     }
@@ -663,21 +664,21 @@ LOG_SUMMARY_ARGS = {
     }
 
 
-# --- Archive data table section ---
+# --- Archive summary data table section ---
 
-ARCHIVE_METADATA = {
+ARCHIVE_SUMMARY_METADATA = {
     "section_title": "Data Archive",
     "section_description": (
-        "Summary of archival status data from the last 30 days."),
+        "Summary of archival status data from the past 30 days."),
     "section_nav_label": "Archive",
-    "button_content": "",
-    "button_type": "",
-    "button_link": "",
-    "button_position": "",
+    "button_content": "Full Archive",
+    "button_type": "text",
+    "button_link": "archive",
+    "button_position": "bottom",
     "button_newtab": "",
     }
 
-ARCHIVE_DATA_ARGS = {
+ARCHIVE_SUMMARY_DATA_ARGS = {
     "time_period": "30D",
     "drop_cols": ("time", "timestamp"),
     "col_conversions": STANDARD_COL_CONVERSIONS,
@@ -701,13 +702,14 @@ ARCHIVE_DATA_ARGS = {
     "reset_index": True,
     "index_tostr": True,
     "final_colnames": ["Date", "Rsrt", "NAs", "Vbat", "Pin", "Pout", "Tmax",
-                       "Ntrg", "Ncrc", "Gbyt"],
+                       "Ntrg", "Ncrc", "GByt"],
+    "reverse_output": True,
     "output_args": {
         "double_precision": 1, "date_format": "iso", "date_unit": "s"},
     }
 
-ARCHIVE_ARGS = {
-    "data_args": ARCHIVE_DATA_ARGS,
+ARCHIVE_SUMMARY_ARGS = {
+    "data_args": ARCHIVE_SUMMARY_DATA_ARGS,
     "color_map_axis": "column",
     "color_map": COLOR_TABLE_MAP_ARCHIVE,
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
@@ -784,9 +786,9 @@ LOG_FULL_METADATA = {
     "section_description": (
         "All log entries from this sensor's Brokkr client."),
     "section_nav_label": "Log",
-    "button_content": "Download Raw Log",
+    "button_content": "Download Raw Text",
     "button_type": "text",
-    "button_link": "brokkr_log_full.txt",
+    "button_link": True,
     "button_newtab": "true",
     "button_position": "top",
     "button_newtab": "true",
@@ -801,6 +803,37 @@ LOG_FULL_DATA_ARGS = {
 LOG_FULL_ARGS = {
     "data_args": LOG_FULL_DATA_ARGS,
     "replace_items": LOG_REPLACE_ITEMS,
+    "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
+    }
+
+
+# --- Full archive page ---
+
+ARCHIVE_FULL_METADATA = {
+    "section_title": "Data Archive",
+    "section_description": (
+        "Full table with all archived status data availible."),
+    "section_nav_label": "Archive",
+    "button_content": "Download Raw JSON",
+    "button_type": "text",
+    "button_link": True,
+    "button_position": "top",
+    "button_newtab": "true",
+    }
+
+ARCHIVE_FULL_DATA_ARGS_OVERRIDE = {
+    "time_period": None,
+    "output_args": {
+        "double_precision": 2, "date_format": "iso", "date_unit": "s"},
+    }
+
+ARCHIVE_FULL_DATA_ARGS = {**ARCHIVE_SUMMARY_DATA_ARGS,
+                          **ARCHIVE_FULL_DATA_ARGS_OVERRIDE}
+
+ARCHIVE_FULL_ARGS = {
+    "data_args": ARCHIVE_FULL_DATA_ARGS,
+    "color_map_axis": "column",
+    "color_map": COLOR_TABLE_MAP_ARCHIVE,
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
     }
 
@@ -830,8 +863,8 @@ SENSOR_PAGE_BLOCKS = {
         },
     "archive": {
         "type": "table",
-        "metadata": ARCHIVE_METADATA,
-        "args": ARCHIVE_ARGS,
+        "metadata": ARCHIVE_SUMMARY_METADATA,
+        "args": ARCHIVE_SUMMARY_ARGS,
         },
     }
 
@@ -840,6 +873,14 @@ LOG_PAGE_BLOCKS = {
         "type": "text",
         "metadata": LOG_FULL_METADATA,
         "args": LOG_FULL_ARGS,
+        },
+    }
+
+ARCHIVE_PAGE_BLOCKS = {
+    "fullarchive": {
+        "type": "table",
+        "metadata": ARCHIVE_FULL_METADATA,
+        "args": ARCHIVE_FULL_ARGS,
         },
     }
 
@@ -852,5 +893,9 @@ CONTENT_PAGES = {
     "log": {
         "type": "singlepage",
         "blocks": LOG_PAGE_BLOCKS,
+        },
+    "archive": {
+        "type": "singlepage",
+        "blocks": ARCHIVE_PAGE_BLOCKS,
         },
     }

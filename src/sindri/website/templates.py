@@ -388,7 +388,7 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
         var currentUpdate = new Date(lastUpdateData.lastUpdate);
         if (lastUpdate_{section_id} == null || lastUpdate_{section_id}.getTime() != currentUpdate.getTime()) {{
             lastUpdate_{section_id} = currentUpdate;
-            xhrUpdate_{section_id}.open("GET", "{text_path}", true);
+            xhrUpdate_{section_id}.open("GET", "{data_path}", true);
             xhrUpdate_{section_id}.send();
         }};
     }};

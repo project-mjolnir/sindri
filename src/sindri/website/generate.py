@@ -198,7 +198,7 @@ def generate_table_data(
         time_period=None, drop_cols=None,
         col_conversions=None, preprocess_fn=None, sort_rows=False,
         reset_index=True, index_tostr=False, final_colnames=None,
-        output_args=None, output_path=None,
+        reverse_output=False, output_args=None, output_path=None,
         ):
     if time_period:
         full_data = full_data.last(time_period)
@@ -222,6 +222,8 @@ def generate_table_data(
         table_data.reset_index(inplace=True)
     if final_colnames:
         table_data.columns = list(final_colnames)
+    if reverse_output:
+        table_data = table_data.iloc[::-1, :]
 
     if output_path:
         if output_args is None:
@@ -260,7 +262,7 @@ def generate_text_data(
 
 def generate_plot_data(
         full_data, plot_subplots, time_period=None, decimate=None,
-        col_conversions=None, round_floats=None,
+        col_conversions=None, round_floats=None, reverse_output=False,
         index_converter=None, output_path=None,
         ):
     if time_period:
@@ -276,6 +278,8 @@ def generate_plot_data(
 
     if round_floats:
         plot_data = round(plot_data, round_floats)
+    if reverse_output:
+        plot_data = plot_data.iloc[::-1, :]
 
     if output_path:
         plot_data_json = (plot_data.replace({np.nan: None})
@@ -292,7 +296,8 @@ def generate_plot_data(
     return plot_data
 
 
-def generate_singlepage_data(page_blocks, page_path="", project_path=None):
+def generate_singlepage_data(page_blocks, full_data=None,
+                             page_path="", project_path=None):
     if project_path:
         full_path = Path(project_path) / ASSET_PATH / page_path
     else:
@@ -305,7 +310,8 @@ def generate_singlepage_data(page_blocks, page_path="", project_path=None):
         "plot": generate_plot_data,
         }
 
-    full_data = sindri.process.ingest_status_data(n_days=32)
+    if full_data is None:
+        full_data = sindri.process.ingest_status_data(n_days=None)
     data_input_path = sindri.process.get_status_data_paths(n_days=-1)[-1]
 
     for section_id, block in page_blocks.items():
@@ -333,10 +339,12 @@ def generate_singlepage_data(page_blocks, page_path="", project_path=None):
 
 
 def generate_site_data(content_pages, project_path=None):
+    full_data = sindri.process.ingest_status_data(n_days=None)
     for path, page in content_pages.items():
         if page["type"] == "singlepage":
             generate_singlepage_data(
-                page["blocks"], page_path=path, project_path=project_path)
+                page["blocks"], full_data=full_data,
+                page_path=path, project_path=project_path)
 
 
 def lookup_in_map(param, param_map):
@@ -380,6 +388,7 @@ def generate_steps(plot, color_map=None):
 
 def generate_dashboard_block(
         block_metadata, section_id, data_args,
+        data_path, lastupdate_path,
         layout_map=None, color_map=None,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         update_interval_fast_seconds=STATUS_UPDATE_INTERVAL_FAST_SECONDS,
@@ -407,8 +416,8 @@ def generate_dashboard_block(
         sentinel_value_json=SENTINEL_VALUE_JSON,
         section_id=section_id,
         all_plots="\n".join(all_plots),
-        data_path=DATA_FILENAME.format(section_id=section_id),
-        lastupdate_path=LASTUPDATE_FILENAME.format(section_id=section_id),
+        data_path=data_path,
+        lastupdate_path=lastupdate_path,
         update_interval_seconds=update_interval_seconds,
         fast_update_plots=fast_update_plots,
         update_interval_fast_seconds=update_interval_fast_seconds,
@@ -424,17 +433,20 @@ def generate_dashboard_block(
 
 def generate_table_block(
         block_metadata, section_id, data_args,
+        data_path, lastupdate_path,
         color_map="{}",
         color_map_axis="column",
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         ):
+    if block_metadata["button_link"] is True:
+        block_metadata["button_link"] = data_path
     table_content = sindri.website.templates.TABLE_CONTENT_TEMPLATE.format(
         section_id=section_id,
         color_map=color_map,
         color_map_axis=color_map_axis,
         final_colnames=list(data_args["final_colnames"]),
-        data_path=DATA_FILENAME.format(section_id=section_id),
-        lastupdate_path=LASTUPDATE_FILENAME.format(section_id=section_id),
+        data_path=data_path,
+        lastupdate_path=lastupdate_path,
         update_interval_seconds=update_interval_seconds,
         )
     table_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
@@ -448,19 +460,17 @@ def generate_table_block(
 
 def generate_text_block(
         block_metadata, section_id, data_args,
+        data_path, lastupdate_path,
         replace_items="[]",
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         ):
-    if data_args["output_path"] is None:
-        text_path = data_args["output_path_full"]
-    else:
-        text_path = data_args["output_path"]
-
+    if block_metadata["button_link"] is True:
+        block_metadata["button_link"] = data_path
     text_content = sindri.website.templates.TEXT_CONTENT_TEMPLATE.format(
         section_id=section_id,
         replace_items=replace_items,
-        text_path=text_path,
-        lastupdate_path=LASTUPDATE_FILENAME.format(section_id=section_id),
+        data_path=data_path,
+        lastupdate_path=lastupdate_path,
         update_interval_seconds=update_interval_seconds,
         )
     text_block = sindri.website.templates.CONTENT_SECTION_TEMPLATE.format(
@@ -474,13 +484,17 @@ def generate_text_block(
 
 def generate_plot_block(
         block_metadata, section_id, data_args, content_args,
+        data_path, lastupdate_path,
         name_map=None, layout_map=None, color_map=None,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SLOW_SECONDS,
         ):
+    if block_metadata["button_link"] is True:
+        block_metadata["button_link"] = data_path
     idx_strings = []
     subplot_items = []
     yaxis_items = []
     shape_items = []
+
     for idx, (subplot_variable, subplot_params) in enumerate(
             data_args["plot_subplots"].items()):
         idx_string = str(idx + 1) if idx else ""
@@ -528,8 +542,8 @@ def generate_plot_block(
         subplots_list=", ".join(["'[xy{}]'".format(n) for n in idx_strings]),
         y_axes="\n".join(yaxis_items),
         shape_list="\n".join(shape_items),
-        data_path=DATA_FILENAME.format(section_id=section_id),
-        lastupdate_path=LASTUPDATE_FILENAME.format(section_id=section_id),
+        data_path=data_path,
+        lastupdate_path=lastupdate_path,
         update_interval_seconds=update_interval_seconds,
         **content_args,
         )
@@ -553,9 +567,16 @@ def generate_singlepage_content(page_blocks):
         }
 
     for section_id, block in page_blocks.items():
+        if block["args"]["data_args"].get("output_path", None) is None:
+            data_path = DATA_FILENAME.format(section_id=section_id)
+        else:
+            data_path = block["args"]["data_args"]["output_path"]
+        lastupdate_path = LASTUPDATE_FILENAME.format(section_id=section_id)
         rendered_block = block_function_map[block["type"]](
                 block_metadata=block["metadata"],
                 section_id=section_id,
+                data_path=data_path,
+                lastupdate_path=lastupdate_path,
                 **block["args"],
                 )
         rendered_blocks.append(rendered_block)
