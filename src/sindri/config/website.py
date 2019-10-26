@@ -671,7 +671,7 @@ ARCHIVE_SUMMARY_METADATA = {
     "section_description": (
         "Summary of archival status data from the past 30 days."),
     "section_nav_label": "Archive",
-    "button_content": "Full Archive",
+    "button_content": "View Full Archive",
     "button_type": "text",
     "button_link": "archive",
     "button_position": "bottom",
