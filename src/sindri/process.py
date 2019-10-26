@@ -57,13 +57,12 @@ CALCULATED_COLUMNS = (
 
 def get_status_data_paths(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
                           glob_pattern=GLOB_PATTERN_DEFAULT):
-    files_to_load = Path(data_dir).glob(glob_pattern)
+    files_to_load = sorted(list(Path(data_dir).glob(glob_pattern)))
     if n_days is not None:
         if lag:
-            files_to_load = sorted(
-                list(files_to_load))[(-1 * n_days - lag):(lag * -1)]
+            files_to_load = files_to_load[(-1 * n_days - lag):(lag * -1)]
         else:
-            files_to_load = sorted(list(files_to_load))[-1 * n_days:]
+            files_to_load = files_to_load[-1 * n_days:]
     return files_to_load
 
 

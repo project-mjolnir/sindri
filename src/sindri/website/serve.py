@@ -63,7 +63,7 @@ def deploy_project(source_path=LEKTOR_SOURCE_PATH,
 
 def run_lektor(command, project_path=LEKTOR_PROJECT_PATH, verbose=1):
     extra_args = {}
-    lektor_call = [sys.executable, "-m", "lektor", command]
+    lektor_call = [sys.executable, "-m", "lektor", *command.split(" ")]
     if verbose <= 0:
         extra_args = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
     elif verbose >= 2 and command in {"server", "build"}:

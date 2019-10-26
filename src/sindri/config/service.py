@@ -3,7 +3,6 @@ Configuration to run Sindri as a service for supported platforms (Linux).
 """
 
 # Standard library imports
-from pathlib import Path
 import sys
 
 # Local imports
@@ -28,8 +27,8 @@ SERVICE_DEFAULTS = {
     "Service": {
         "Type": "simple",
         "Environment": ("LEKTOR_DEPLOY_KEY_FILE="
-                        f"{str(USER_HOME / '.ssh' / 'id_mjolnir')}"),
-        "ExecStart": "{sys.executable} -m sindri start --mode 'production'",
+                        f"{str(USER_HOME / '.ssh' / 'id_rsa')}"),
+        "ExecStart": f"{sys.executable} -m sindri start --mode 'production'",
         "Restart": "on-failure",
         "RestartSec": str(360),
         "TimeoutStartSec": str(360),

@@ -2,6 +2,7 @@
 
 A Python package to receive, process, store, monitor and serve science data and status information on a server from remote HAMMA sensor clients; i.e. those running the ``brokkr`` package.
 Part of Project Mjolnir, a system to allow remote monitoring, control and data uplink from multiple networks of HAMMA2 lightning sensors.
+See the built-in help of the ``sindri`` command this package installs for more details on basic usage and functionality.
 
 
 
