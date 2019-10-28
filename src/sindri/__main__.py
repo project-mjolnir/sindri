@@ -44,6 +44,16 @@ def generate_argparser_main():
         "--mode", type=str, choices=("test", "production"),
         help="Run in test (local server) or production (build & deploy) mode")
     parser_deploy.add_argument(
+        "--temp-cache-dir", dest="cache_dir",
+        nargs="?", default=None, const=True,
+        help=(
+            "If passed with a path, will use it as the source cache dir "
+            "for the site. If passed alone, will use the temp cache dir "
+            "instead of the primary one (useful for serving a site locally "
+            "on-demand simultantiously with a production site). "
+            "If not passed, will use the default primary cache dir."
+            )),
+    parser_deploy.add_argument(
         "-v", "--verbose", action="count", help="Increase verbosity of output")
 
     # Parser for the serve-website subcommand
@@ -56,6 +66,16 @@ def generate_argparser_main():
     parser_serve.add_argument(
         "--update-interval-s", type=float,
         help="Minimum update interval of the site, in seconds")
+    parser_serve.add_argument(
+        "--temp-cache-dir", dest="cache_dir",
+        nargs="?", default=None, const=True,
+        help=(
+            "If passed with a path, will use it as the source cache dir "
+            "for the site. If passed alone, will use the temp cache dir "
+            "instead of the primary one (useful for serving a site locally "
+            "on-demand simultantiously with a production site). "
+            "If not passed, will use the default primary cache dir."
+            )),
     parser_serve.add_argument(
         "-v", "--verbose", action="count", help="Increase verbosity of output")
 
