@@ -27,11 +27,11 @@ CALCULATED_COLUMNS = (
      lambda full_data: full_data["crc_errors"].diff(1).clip(lower=0)),
     ("crc_errors_hourly", "crc_errors_delta",
      lambda full_data:
-         full_data["crc_errors_delta"].rolling(60, min_periods=3).sum()
+         full_data["crc_errors_delta"].rolling(60, min_periods=2).sum()
          / round(full_data["time"].diff(60).dt.total_seconds() / (60 * 60))),
     ("crc_errors_daily", "crc_errors_hourly",
      lambda full_data:
-         full_data["crc_errors_delta"].rolling(60 * 24, min_periods=60).sum()
+         full_data["crc_errors_delta"].rolling(60 * 24, min_periods=2).sum()
          / round(full_data["time"].diff(60 * 24).dt.total_seconds()
                  / (60 * 60 * 24))),
     ("trigger_delta", "valid_packets",
@@ -43,11 +43,11 @@ CALCULATED_COLUMNS = (
      / round(full_data["time"].diff(1).dt.total_seconds() / 60)),
     ("trigger_rate_5min", "trigger_rate_1min",
      lambda full_data:
-     full_data["trigger_delta"].rolling(5, min_periods=1).mean()
+     full_data["trigger_delta"].rolling(5, min_periods=2).mean()
      / round(full_data["time"].diff(5).dt.total_seconds() / (60 * 5))),
     ("trigger_rate_1hr", "trigger_rate_5min",
      lambda full_data:
-     full_data["trigger_delta"].rolling(60, min_periods=1).mean()
+     full_data["trigger_delta"].rolling(60, min_periods=6).mean()
      / round(full_data["time"].diff(60).dt.total_seconds() / (60 * 60))),
     ("triggers_remaining", "bytes_remaining",
      lambda full_data: round(full_data["bytes_remaining"]

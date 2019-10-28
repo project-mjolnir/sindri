@@ -6,7 +6,6 @@ Data, plots and calculations for the HAMMA Mjolnir status website.
 import copy
 import datetime
 import json
-import math
 import os
 from pathlib import Path
 import shutil
@@ -33,9 +32,6 @@ LEKTOR_ICON_VERSION_PATH = THEME_PATH / "lektor-icon" / "_version.txt"
 LASTUPDATE_FILENAME = "{section_id}_lastupdate.json"
 DATA_FILENAME = "{section_id}_data.{extension}"
 DEFAULT_EXTENSION = "json"
-LOGFILE_NAME = "brokkr.log"
-
-SENTINEL_VALUE_JSON = -999
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
@@ -58,16 +54,16 @@ DASHBOARD_DATA_ARGS_DEFAULT = {
 
 
 def safe_nan(value):
-    if math.isnan(value) or np.isnan(value):
-        return SENTINEL_VALUE_JSON
+    if not np.isfinite(value):
+        return None
     return value
 
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         try:
-            if math.isnan(obj) or np.isnan(obj):
-                return SENTINEL_VALUE_JSON
+            if not np.isfinite(obj):
+                return None
         except Exception:
             pass
         if isinstance(obj, np.integer):
@@ -236,7 +232,7 @@ def generate_dashboard_data(
                     )
             except Exception as e:
                 print(str(type(e)), e)
-                plot_data = [SENTINEL_VALUE_JSON for __ in range(3)]
+                plot_data = [None for __ in range(3)]
             dashboard_data[plot_id] = plot_data
 
     if dashboard_data and output_path:
@@ -295,7 +291,7 @@ def generate_plot_data(
         **table_process_args)
 
     if output_path:
-        plot_data_json = (plot_data.replace({np.nan: None})
+        plot_data_json = (plot_data.replace([np.nan, np.inf, np.NINF], None)
                           .to_dict(orient="list"))
         if plot_data.index.name:
             index_name = plot_data.index.name
@@ -368,7 +364,11 @@ def generate_daily_data(
 
     output_data_grouped = output_data.groupby(file_grouper, sort=False)
     for group in output_data_grouped.groups:
-        group_data = output_data_grouped.get_group(group)
+        try:
+            group_data = output_data_grouped.get_group(group)
+        # Skip if no data for this day
+        except KeyError:
+            continue
         filename = filename_template.format(group.date())
         group_data.to_csv(output_path / filename, line_terminator="\n",
                           **output_args)
@@ -495,7 +495,6 @@ def generate_dashboard_block(
             fast_update_plots.append(plot_id)
     widgets = "\n".join(widget_blocks)
     update_script = sindri.website.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
-        sentinel_value_json=SENTINEL_VALUE_JSON,
         section_id=section_id,
         all_plots="\n".join(all_plots),
         data_path=data_path,
@@ -518,6 +517,7 @@ def generate_table_block(
         data_path, lastupdate_path,
         color_map="{}",
         color_map_axis="column",
+        alert_on_fail=False,
         extension=DEFAULT_EXTENSION,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         ):
@@ -533,6 +533,7 @@ def generate_table_block(
         color_map=color_map,
         color_map_axis=color_map_axis,
         final_colnames=final_colnames,
+        alert_on_fail=str(alert_on_fail).lower(),
         data_path=data_path,
         extension=extension,
         lastupdate_path=lastupdate_path,
@@ -553,8 +554,6 @@ def generate_text_block(
         replace_items="[]",
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SECONDS,
         ):
-    if block_metadata["button_link"] is True:
-        block_metadata["button_link"] = data_path
     text_content = sindri.website.templates.TEXT_CONTENT_TEMPLATE.format(
         section_id=section_id,
         replace_items=replace_items,
@@ -578,13 +577,12 @@ def generate_plot_block(
         extension=DEFAULT_EXTENSION,
         update_interval_seconds=STATUS_UPDATE_INTERVAL_SLOW_SECONDS,
         ):
-    if block_metadata["button_link"] is True:
-        block_metadata["button_link"] = data_path
     idx_strings = []
     subplot_items = []
     yaxis_items = []
     shape_items = []
     data_path = Path(data_path).stem
+    content_args["alert_on_fail"] = str(content_args["alert_on_fail"]).lower()
 
     for idx, subplot_variable in enumerate(data_args["plot_subplots"]):
         idx_string = str(idx + 1) if idx else ""
@@ -628,7 +626,6 @@ def generate_plot_block(
 
     plot_content = sindri.website.templates.PLOT_CONTENT_TEMPLATE.format(
         section_id=section_id,
-        sentinel_value_json=SENTINEL_VALUE_JSON,
         sub_plots="\n".join(subplot_items),
         subplots_list=", ".join(["'[xy{}]'".format(n) for n in idx_strings]),
         y_axes="\n".join(yaxis_items),
@@ -670,6 +667,9 @@ def generate_singlepage_content(page_blocks):
         lastupdate_path = LASTUPDATE_FILENAME.format(section_id=section_id)
         if block["metadata"].get("button_link", None) is True:
             block["metadata"]["button_link"] = data_path
+        if block["metadata"].get("button_newtab", None) is not None:
+            block["metadata"]["button_newtab"] = str(
+                block["metadata"]["button_newtab"]).lower()
 
         rendered_block = block_function_map[block["type"]](
                 block_metadata=block["metadata"],

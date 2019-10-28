@@ -62,14 +62,6 @@ content:
 
 
 DASHBOARD_SCRIPT_TEMPLATE = """
-function convertNaN(value) {{
-    if (value == {sentinel_value_json}) {{
-        return NaN;
-    }};
-    return value;
-}};
-
-
 var plotConfig_{section_id} = {{
     editable: false,
     responsive: true,
@@ -214,9 +206,9 @@ DASHBOARD_PLOT_TEMPLATE = """
 """
 
 GAUGE_PLOT_UPDATE_CODE_VALUE = """
-data["value"] = convertNaN(statusData[plotid][0]);
-data["delta.reference"] = convertNaN(statusData[plotid][1]);
-data["gauge.threshold.value"] = convertNaN(statusData[plotid][2]);
+data["value"] = statusData[plotid][0];
+data["delta.reference"] = statusData[plotid][1];
+data["gauge.threshold.value"] = statusData[plotid][2];
 
 """
 
@@ -328,8 +320,8 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
                 extraPathText = dataPath;
             }};
             Plotly.d3.{extension}(dataPath, function(error, data) {{
-                if ((error || ! data || data.length < 1 ||  Object.values(Plotly.d3.values(data)[0])[0] == "")) {{
-                    window.alert("Data for " + extraPathText + " not availible.");
+                if ({alert_on_fail} && (error || ! data || data.length < 2 ||  Object.values(Plotly.d3.values(data)[0])[0] == "")) {{
+                    window.alert("Data for " + extraPathText + " not available.");
                     return;
                 }};
                 tableHeader_{section_id}.selectAll("*").remove();
@@ -492,19 +484,19 @@ function unpack(data, key) {{
     return data[key];
 }};
 
-function createSubplots(plotid, subplotList, statusData) {{
+function createSubplots(plotid, subplotList, data) {{
     for (i = 0; i < subplotList.length; i++) {{
-        subplotList[i].x = unpack(statusData, "{x_variable}");
-        subplotList[i].y = unpack(statusData, subplotList[i].name);
+        subplotList[i].x = unpack(data, "{x_variable}");
+        subplotList[i].y = unpack(data, subplotList[i].name);
     }};
     Plotly.newPlot(plotid, subplotList, plotLayout_{section_id}, plotConfig_{section_id});
 }};
 
-function updateSubplots(plotid, subplotList, statusData) {{
+function updateSubplots(plotid, subplotList, data) {{
     for (i = 0; i < subplotList.length; i++) {{
         var data = {{}}
-        data["x"] = unpack(statusData, "{x_variable}");
-        data["y"] = unpack(statusData, subplotList[i].name);
+        data["x"] = unpack(data, "{x_variable}");
+        data["y"] = unpack(data, subplotList[i].name);
         Plotly.restyle(plotid, data, i);
     }};
 }};
@@ -525,15 +517,15 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
                 extraPathText = dataPath;
             }};
 
-            Plotly.d3.{extension}(dataPath, function(error, statusData) {{
-                if ((error || ! statusData || statusData.length < 1 ||  Object.values(Plotly.d3.values(statusData)[0])[0] == "")) {{
-                    window.alert("Data for " + extraPathText + " not availible.");
+            Plotly.d3.{extension}(dataPath, function(error, data) {{
+                if ({alert_on_fail} && (error || ! data || data.length < 2 ||  Object.values(Plotly.d3.values(data)[0])[0] == "")) {{
+                    window.alert("Data for " + extraPathText + " not available.");
                     return;
                 }};
                 if (firstUpdate) {{
-                    createSubplots("{section_id}-output", subplots_{section_id}, statusData);
+                    createSubplots("{section_id}-output", subplots_{section_id}, data);
                 }} else {{
-                    updateSubplots("{section_id}-output", subplots_{section_id}, statusData);
+                    updateSubplots("{section_id}-output", subplots_{section_id}, data);
                     firstUpdate = false;
                 }};
             }});

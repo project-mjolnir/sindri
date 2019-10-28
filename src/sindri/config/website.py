@@ -648,7 +648,7 @@ LOG_SUMMARY_METADATA = {
     "button_type": "text",
     "button_link": "log",
     "button_position": "bottom",
-    "button_newtab": "false",
+    "button_newtab": False,
     }
 
 LOG_SUMMARY_DATA_ARGS = {
@@ -675,7 +675,7 @@ ARCHIVE_SUMMARY_METADATA = {
     "button_type": "text",
     "button_link": "archive",
     "button_position": "bottom",
-    "button_newtab": "",
+    "button_newtab": False,
     }
 
 ARCHIVE_SUMMARY_DATA_ARGS = {
@@ -771,6 +771,7 @@ HISTORY_PLOT_CONTENT_ARGS = {
     "x_variable": "time",
     "xaxis_type": "date",
     "y_gap": 0.1,
+    "alert_on_fail": False,
     }
 
 HISTORY_PLOT_ARGS = {
@@ -793,7 +794,7 @@ LOG_FULL_METADATA = {
     "button_content": "Download Raw Text",
     "button_type": "text",
     "button_link": True,
-    "button_newtab": "true",
+    "button_newtab": True,
     "button_position": "top",
     }
 
@@ -821,7 +822,7 @@ ARCHIVE_FULL_METADATA = {
     "button_type": "text",
     "button_link": True,
     "button_position": "top",
-    "button_newtab": "true",
+    "button_newtab": True,
     }
 
 ARCHIVE_FULL_DATA_ARGS_OVERRIDE = {
@@ -912,13 +913,14 @@ DAILY_TABLE_METADATA = {
     "button_type": "text",
     "button_link": True,
     "button_position": "top",
-    "button_newtab": "true",
+    "button_newtab": True,
     }
 
 DAILY_TABLE_ARGS = {
     "data_args": {"output_path": "hamma_"},
     "color_map": COLOR_TABLE_MAP,
     "color_map_axis": "column",
+    "alert_on_fail": True,
     "extension": "csv",
     "update_interval_seconds": STATUS_UPDATE_INTERVAL_SLOW_SECONDS,
     }
