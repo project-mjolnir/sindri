@@ -30,7 +30,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="iot lightning sensor remote control research m2m server web",
-    url=f"https://github.com/hamma-dev/{PROJECT_NAME}",
+    url="https://www.hamma.dev/",
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
     python_requires=">=3.6",
