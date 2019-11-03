@@ -19,7 +19,7 @@ from sindri.website.templates import (
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
-STATUS_UPDATE_INTERVAL_SLOW_SECONDS = 180
+STATUS_UPDATE_INTERVAL_SLOW_SECONDS = 300
 
 THEME_FG_COLOR = "white"
 THEME_BG_ACCENT_COLOR = "#333333"
@@ -69,9 +69,9 @@ VARIABLE_NAME_MAP = {
 STANDARD_LAYOUTS = {
     "uptime": {"dtick": 240, "range": [0, 30 * 24], "suffix": " h"},
     "ping": {"dtick": 1, "range": [0, 2], "suffix": ""},
-    "battery_voltage": {"dtick": 1, "range": [10, 15], "suffix": " V"},
+    "battery_voltage": {"dtick": 2, "range": [10, 16], "suffix": " V"},
     "array_voltage": {"dtick": 10, "range": [0, 50], "suffix": " V"},
-    "charge_current": {"dtick": 3, "range": [0, 12], "suffix": " A"},
+    "charge_current": {"dtick": 5, "range": [0, 15], "suffix": " A"},
     "load_current": {"dtick": 0.5, "range": [0, 2.5], "suffix": " A"},
     "temperature": {"dtick": 20, "range": [-20, 80], "suffix": "°C"},
     "charge_state": {"dtick": 1, "range": [0, 8], "suffix": ""},
@@ -79,8 +79,8 @@ STANDARD_LAYOUTS = {
     "load_state": {"dtick": 1, "range": [0, 5], "suffix": ""},
     "load_fault": {"dtick": 32, "range": [0, 128], "suffix": ""},
     "alarm": {"dtick": 65536, "range": [0, 262144], "suffix": ""},
-    "led_state": {"dtick": 2, "range": [0, 10], "suffix": ""},
-    "power_out": {"dtick": 50, "range": [0, 150], "suffix": " W"},
+    "led_state": {"dtick": 5, "range": [0, 20], "suffix": ""},
+    "power_out": {"dtick": 75, "range": [0, 225], "suffix": " W"},
     "power_load": {"dtick": 10, "range": [0, 30], "suffix": " W"},
     "crc_errors": {"dtick": 25, "range": [0, 100], "suffix": ""},
     "crc_errors_delta": {"dtick": 1, "range": [0, 5], "suffix": ""},
@@ -129,7 +129,7 @@ STANDARD_COLORS_TEMP = [
 STANDARD_COLOR_TABLES = {
     "notzero": [[-0.5, 0.5], ["red", "green", "red"]],
     "uptime": [[1, 6, 24, 48], STANDARD_COLORS[::-1]],
-    "battery_voltage": [[10.4, 11, 11.5, 12, 14, 14.3, 14.6, 15],
+    "battery_voltage": [[10.4, 11, 11.5, 12, 14.8, 15.9, 15.1, 15.5],
                         STANDARD_COLORS[::-1] + STANDARD_COLORS[1:]],
     "array_voltage": [[4, 12, 24, 32], STANDARD_COLORS[::-1]],
     "charge_current": [[0.1, 0.5, 1.0, 2.0], STANDARD_COLORS[::-1]],
@@ -139,7 +139,7 @@ STANDARD_COLOR_TABLES = {
     "charge_state": [[i + 0.5 for i in range(8)],
                      ["gray", "blue", "maroon", "orange", "red",
                       "yellow", "lime", "green", "teal"]],
-    "reference_voltage": [[12.5, 12.8, 13.0, 13.1, 14.3, 14.4, 14.6, 15.0],
+    "reference_voltage": [[12.5, 12.8, 13.1, 13.9, 14.9, 15.0, 15.1, 15.5],
                           STANDARD_COLORS[::-1] + STANDARD_COLORS[1:]],
     "load_state": [[i + 0.5 for i in range(5)],
                    ["gray", "green", "yellow", "orange", "red", "maroon"]],
@@ -242,7 +242,7 @@ STATUS_DASHBOARD_PLOTS = {
             "increasing_color": "red",
             "dtick": UPDATE_INT / 2,
             "range": [0, UPDATE_INT * 2],
-            "steps": ([UPDATE_INT + ((i + 1) * 60)
+            "steps": ([UPDATE_INT + ((i) * 60)
                        for i in range(len(STANDARD_COLORS) - 1)],
                       STANDARD_COLORS),
             "threshold_thickness": 0.75,
@@ -579,7 +579,8 @@ STATUS_DASHBOARD_PLOTS = {
 STATUS_DASHBOARD_METADATA = {
     "section_title": "Status Dashboard",
     "section_description": (
-        "Real-time status of this HAMMA sensor and the Mjolnir system."),
+        "Live status of this HAMMA sensor and the Mjolnir system, "
+        f"updated dynamically every {STATUS_UPDATE_INTERVAL_SECONDS} s."),
     "section_nav_label": "Status",
     }
 
@@ -602,13 +603,14 @@ STATUS_DASHBOARD_ARGS = {
 RAW_OUTPUT_METADATA = {
     "section_title": "Raw Output Data",
     "section_description": (
-        "Raw current and 24-hour max/mean/min Brokkr output data."),
+        "Raw current and 24-hour max/mean/min Brokkr output data, "
+        f"updated dynamically every {STATUS_UPDATE_INTERVAL_SECONDS} s."),
     "section_nav_label": "Data",
-    "button_content": "",
-    "button_type": "",
-    "button_link": "",
-    "button_position": "",
-    "button_newtab": "",
+    "button_content": "View Full Daily Data",
+    "button_type": "text",
+    "button_link": "daily",
+    "button_position": "top",
+    "button_newtab": False,
     }
 
 RAW_OUTPUT_DATA_ARGS = {
@@ -642,7 +644,8 @@ RAW_OUTPUT_ARGS = {
 LOG_SUMMARY_METADATA = {
     "section_title": "Client Log",
     "section_description": (
-        "Latest log entries from this sensor's Brokkr client."),
+        "Latest log entries from this sensor's Brokkr client, "
+        f"updated dynamically every {STATUS_UPDATE_INTERVAL_SECONDS} s."),
     "section_nav_label": "Log",
     "button_content": "View Full Log",
     "button_type": "text",
@@ -669,7 +672,9 @@ LOG_SUMMARY_ARGS = {
 ARCHIVE_SUMMARY_METADATA = {
     "section_title": "Data Archive",
     "section_description": (
-        "Summary of archival status data from the past 30 days."),
+        "Summary of archival status data from the past 30 days, "
+        f"updated dynamically every {STATUS_UPDATE_INTERVAL_SLOW_SECONDS} s."
+        "\n\nClick a date for a full daily data table and plot."),
     "section_nav_label": "Archive",
     "button_content": "View Full Archive",
     "button_type": "text",
@@ -715,7 +720,7 @@ ARCHIVE_SUMMARY_ARGS = {
     "data_args": ARCHIVE_SUMMARY_DATA_ARGS,
     "color_map": COLOR_TABLE_MAP_ARCHIVE,
     "color_map_axis": "column",
-    "update_interval_seconds": STATUS_UPDATE_INTERVAL_SECONDS,
+    "update_interval_seconds": STATUS_UPDATE_INTERVAL_SLOW_SECONDS,
     }
 
 
@@ -743,7 +748,10 @@ HISTORY_PLOT_SUBPLOTS = {
 
 HISTORY_PLOT_METADATA = {
     "section_title": "History Plot",
-    "section_description": "Plots of recorded data over time.",
+    "section_description": (
+        "Interactive strip chart of recorded 5 min data for the past 30 days, "
+        f"updated dynamically every {STATUS_UPDATE_INTERVAL_SLOW_SECONDS} s."
+        "\n\nHover to view values and click/drag to zoom in/out."),
     "section_nav_label": "Plots",
     "button_content": "",
     "button_type": "",
@@ -789,7 +797,8 @@ HISTORY_PLOT_ARGS = {
 LOG_FULL_METADATA = {
     "section_title": "Full Brokkr Client Log",
     "section_description": (
-        "All log entries from this sensor's Brokkr client."),
+        "All log entries from this sensor's Brokkr client, "
+        f"updated dynamically every {STATUS_UPDATE_INTERVAL_SECONDS} s."),
     "section_nav_label": "Log",
     "button_content": "Download Raw Text",
     "button_type": "text",
@@ -816,7 +825,9 @@ LOG_FULL_ARGS = {
 ARCHIVE_FULL_METADATA = {
     "section_title": "Data Archive",
     "section_description": (
-        "Full table with all archived status data availible."),
+        "Full table listing all archived status data available, "
+        f"updated dynamically every {STATUS_UPDATE_INTERVAL_SECONDS} s."
+        "\n\nClick a date for a full daily data table and plot."),
     "section_nav_label": "Archive",
     "button_content": "Download Raw JSON",
     "button_type": "text",
@@ -877,7 +888,9 @@ DAILY_TOP_ARGS = {
 DAILY_PLOT_METADATA = {
     "section_title": "Daily History Plot",
     "section_description": (
-        "Plot displaying all the key parameters over the course of the day."),
+        "Interactive strip chart of recorded 1 min data for the selected day, "
+        f"updated dynamically every {STATUS_UPDATE_INTERVAL_SLOW_SECONDS} s."
+        "\n\nHover to view a value and click/drag to zoom in/out."),
     "section_nav_label": "Daily Plot",
     "button_content": "",
     "button_type": "",
@@ -907,7 +920,8 @@ DAILY_PLOT_ARGS = {
 DAILY_TABLE_METADATA = {
     "section_title": "Daily Data Table",
     "section_description": (
-        "Full-resolution daily monitoring data from the Brokkr client."),
+        "Full-resolution daily monitoring data from the Brokkr client, "
+        f"updated dynamically every {STATUS_UPDATE_INTERVAL_SLOW_SECONDS} s."),
     "section_nav_label": "Full Table",
     "button_content": "Download Raw CSV",
     "button_type": "text",

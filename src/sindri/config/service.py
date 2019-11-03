@@ -30,9 +30,9 @@ SERVICE_DEFAULTS = {
                         f"{str(USER_HOME / '.ssh' / 'id_rsa')}"),
         "ExecStart": f"{sys.executable} -m sindri start --mode 'production'",
         "Restart": "on-failure",
-        "RestartSec": str(360),
-        "TimeoutStartSec": str(360),
-        "TimeoutStopSec": str(360),
+        "RestartSec": "300",
+        "TimeoutStartSec": "300",
+        "TimeoutStopSec": "300",
         },
     }
 
