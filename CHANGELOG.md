@@ -1,6 +1,17 @@
 # Sindri Changelog
 
 
+## Version 0.2.1 (2019-11-02)
+
+Bufix and refinement release with the following changes:
+
+- Revise UI text to inform user about dynamic updates and increase discoverability
+- Add button to data section with link to current day's data
+- Increase and refine ranges and color tables based on increased charge targets
+- Reduce update frequency to 10 minutes to align with Github cache time
+
+
+
 ## Version 0.2.0 Final (2019-10-29)
 
 Final version of major upgrade incorporating additional new features, enhancements and numerous bug fixes and refactoring changes.
@@ -9,7 +20,7 @@ New frontend features and enhancements:
 * Add interactive strip plot to daily data page
 * Add responsive control UI to daily data page
 * Add optional alert popup for when data cannot be loaded or is corrupted
-* Add ability to request a temp or custom chache dir (eg for concurrent builds)
+* Add ability to request a temp or custom cache dir (eg for concurrent builds)
 * Refine table styling, UI text and more
 
 Backend improvements:
