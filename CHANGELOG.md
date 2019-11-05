@@ -1,14 +1,23 @@
 # Sindri Changelog
 
 
+## Version 0.2.2 (2019-11-04)
+
+Bufix release with the following changes:
+
+* Fix serious pandas bug with not replacing NaN values correctly in plot data
+* Harmonize bullet characters in changelog
+
+
+
 ## Version 0.2.1 (2019-11-02)
 
 Bufix and refinement release with the following changes:
 
-- Revise UI text to inform user about dynamic updates and increase discoverability
-- Add button to data section with link to current day's data
-- Increase and refine ranges and color tables based on increased charge targets
-- Reduce update frequency to 10 minutes to align with Github cache time
+* Revise UI text to inform user about dynamic updates and increase discoverability
+* Add button to data section with link to current day's data
+* Increase and refine ranges and color tables based on increased charge targets
+* Reduce update frequency to 10 minutes to align with Github cache time
 
 
 
