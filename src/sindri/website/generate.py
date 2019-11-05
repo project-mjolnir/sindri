@@ -291,8 +291,9 @@ def generate_plot_data(
         **table_process_args)
 
     if output_path:
-        plot_data_json = (plot_data.replace([np.nan, np.inf, np.NINF], None)
-                          .to_dict(orient="list"))
+        plot_data_json = (
+            plot_data.where(np.isfinite(plot_data), None)
+            .to_dict(orient="list"))
         if plot_data.index.name:
             index_name = plot_data.index.name
         else:
