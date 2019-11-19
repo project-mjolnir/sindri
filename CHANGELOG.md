@@ -1,6 +1,15 @@
 # Sindri Changelog
 
 
+## Version 0.2.3 (2019-11-18)
+
+Bufix release with the following changes:
+
+* Fix issue with archive table on sensor page not being updated with new data
+* Add delay before first rebuild in test mode to avoid any concurrency issues
+
+
+
 ## Version 0.2.2 (2019-11-04)
 
 Bufix release with the following changes:

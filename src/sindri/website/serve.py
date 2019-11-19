@@ -111,6 +111,10 @@ def start_serving_website(
                    wait_exit=False, verbose=verbose)
 
     try:
+        # Initial 60 s wait to ensure site fully builds once before rerunning
+        if mode == "test":
+            for __ in range(58):
+                time.sleep(1)
         while True:
             sindri.utils.misc.delay_until_desired_time(update_interval_s)
             update_data(project_path=cache_dir)

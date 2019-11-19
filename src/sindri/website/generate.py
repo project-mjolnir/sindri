@@ -307,7 +307,7 @@ def generate_plot_data(
 
 
 def generate_singlepage_data(page_blocks, full_data,
-                             input_path=None, output_path=None):
+                             input_path_default=None, output_path=None):
     data_function_map = {
         "dashboard": generate_dashboard_data,
         "table": generate_table_data,
@@ -319,7 +319,7 @@ def generate_singlepage_data(page_blocks, full_data,
         if block["type"] == "generic":
             continue
         input_path = Path(block["args"]["data_args"]
-                          .get("input_path", input_path))
+                          .get("input_path", input_path_default))
         if input_path is not None and output_path is not None:
             input_path = input_path.expanduser()
             update_needed = check_update(
@@ -344,7 +344,7 @@ def generate_singlepage_data(page_blocks, full_data,
 
 
 def generate_daily_data(
-        page_blocks, full_data, input_path, output_path,
+        page_blocks, full_data, input_path_default, output_path,
         filename_template, file_grouper,
         output_args=None, **table_process_args):
     if output_args is None:
@@ -354,7 +354,7 @@ def generate_daily_data(
         if page_blocks[section_id]["type"] == "generic":
             continue
         update_needed = check_update(
-            input_path,
+            input_path_default,
             output_path / (LASTUPDATE_FILENAME.format(section_id=section_id)))
         if not update_needed:
             continue
@@ -377,7 +377,7 @@ def generate_daily_data(
 
 def generate_site_data(content_pages, project_path=None):
     full_data = sindri.process.ingest_status_data(n_days=None)
-    input_path = sindri.process.get_status_data_paths(n_days=1)[0]
+    input_path_default = sindri.process.get_status_data_paths(n_days=1)[0]
     if project_path:
         project_path = Path(project_path) / ASSET_PATH
     else:
@@ -388,14 +388,16 @@ def generate_site_data(content_pages, project_path=None):
         os.makedirs(output_path, exist_ok=True)
         if page["type"] is None:
             continue
-        elif page["type"] == "singlepage":
-            generate_singlepage_data(
-                page_blocks=page["blocks"], full_data=full_data,
-                input_path=input_path, output_path=output_path)
+        common_args = {
+            "page_blocks": page["blocks"],
+            "full_data": full_data,
+            "input_path_default": input_path_default,
+            "output_path": output_path,
+            }
+        if page["type"] == "singlepage":
+            generate_singlepage_data(**common_args)
         elif page["type"] == "daily":
-            generate_daily_data(
-                page_blocks=page["blocks"], full_data=full_data,
-                input_path=input_path, output_path=output_path, **page["args"])
+            generate_daily_data(**common_args, **page["args"])
         else:
             raise ValueError(
                 "Page type must be one of {None, 'singlepage', 'daily'}, "
