@@ -9,15 +9,45 @@ import setuptools
 
 
 PROJECT_NAME = "sindri"
+PACKAGE_DIR = "src"
+WEBSITE_TEMPLATE_SUBPATH = Path(
+    "website", "mjolnir-website", "themes", "lektor-icon")
+WEBSITE_TEMPLATE_EXCLUDE_GLOBS = [
+    "nppBackup/*", "*.orig", "*.bak", "*.tmp", "*.md", "*.ttf", "bootstrap.css"
+    ]
+WEBSITE_TEMPLATE_EXCLUDE_SUBPATHS = [
+    "images", "example-site"]
 
+# Get project dir path
+project_dir = Path(__file__).resolve().parent
 
-with open("README.md", "r", encoding="utf-8") as readme_file:
+# Get readme description
+with open(project_dir / "README.md",
+          "r", encoding="utf-8") as readme_file:
     long_description = readme_file.read()
 
+# Single-source version number
 version = {}
-with open(Path("src") / PROJECT_NAME / "_version.py",
+with open(project_dir
+          / "src" / PROJECT_NAME / "_version.py",
           "r", encoding="utf-8") as version_file:
     exec(version_file.read(), version)
+
+# Build a list of data files in site theme
+package_path = Path(project_dir, PACKAGE_DIR, PROJECT_NAME)
+website_template_exclude_paths_full = [
+    (WEBSITE_TEMPLATE_SUBPATH / subpath)
+    for subpath in WEBSITE_TEMPLATE_EXCLUDE_SUBPATHS]
+website_template_base = package_path / "website" / "mjolnir-website"
+website_template_files = website_template_base.glob("**/*")
+website_template_files = [file_path.relative_to(package_path)
+                          for file_path in website_template_files]
+website_template_files = [
+    file_path for file_path in website_template_files if not any(
+        [file_path.match(exclude_path)
+         for exclude_path in WEBSITE_TEMPLATE_EXCLUDE_GLOBS] +
+        [parent_path in file_path.parents
+         for parent_path in website_template_exclude_paths_full])]
 
 
 setuptools.setup(
@@ -31,8 +61,12 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     keywords="iot lightning sensor remote control research m2m server web",
     url="https://www.hamma.dev/",
-    packages=setuptools.find_packages("src"),
-    package_dir={"": "src"},
+    packages=setuptools.find_packages(PACKAGE_DIR),
+    package_dir={"": PACKAGE_DIR},
+    package_data={
+        PROJECT_NAME: [
+            file_path.as_posix() for file_path in website_template_files],
+        },
     python_requires=">=3.6",
     install_requires=[
         "lektor>=3.1",
@@ -41,7 +75,8 @@ setuptools.setup(
         ],
     entry_points={
         "console_scripts": [
-            f"{PROJECT_NAME}={PROJECT_NAME}.__main__:main"]
+            f"{PROJECT_NAME}={PROJECT_NAME}.__main__:main",
+            ],
         },
     classifiers=[
         "Development Status :: 3 - Alpha",
