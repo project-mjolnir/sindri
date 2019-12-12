@@ -1,5 +1,4 @@
 lektor>=3.1
-matplotlib
 numpy
 pandas
 serviceinstaller>=0.1.1; sys_platform == 'linux'

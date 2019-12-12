@@ -1,6 +1,14 @@
 # Sindri Changelog
 
 
+## Version 0.2.4 (2019-12-11)
+
+Bugfix release with the following changes:
+* Ensure website template is properly packaged with source and binary dists
+* Fix fragile paths to readme and version file in setup.py
+* Remove no longer needed matplotlib spec in requirements file
+
+
 ## Version 0.2.3 (2019-11-18)
 
 Bufix release with the following changes:
