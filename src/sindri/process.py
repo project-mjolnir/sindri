@@ -18,9 +18,17 @@ GLOB_PATTERN_DEFAULT = "hamma*_????-??-??.csv"
 
 FIGSIZE_DEFAULT = (8, 24)
 
+POWER_IDLE_W = 2.8
+
 CALCULATED_COLUMNS = (
     ("power_load", "power_out",
      lambda full_data: full_data["adc_vl_f"] * full_data["adc_il_f"]),
+    ("power_net", "power_load",
+     lambda full_data:
+         (full_data["power_out"] - full_data["power_load"] - POWER_IDLE_W)),
+    ("charge_net_24h", "power_net",
+     lambda full_data:
+         full_data["power_net"].rolling("24h", min_periods=2).sum() / 60),
     ("sensor_uptime", "vb_max",
      lambda full_data: full_data["sequence_count"] / (60 * 60)),
     ("crc_errors_delta", "crc_errors",
@@ -95,6 +103,7 @@ def preprocess_status_data(raw_status_data, decimate=None,
     status_data["time"] = pd.to_datetime(status_data["time"],
                                          format="%Y-%m-%d %H:%M:%S.%f")
     status_data.set_index("time", drop=False, inplace=True)
+    status_data = status_data[status_data.index.notnull()]
 
     status_data = calculate_columns(
         status_data, column_specs=column_specs)
