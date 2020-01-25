@@ -1,12 +1,25 @@
 # Sindri Changelog
 
 
+## Version 0.2.5 (2020-01-24)
+
+Bugfix release with the following changes:
+
+* Add net power and 24 hour net charge calculated columns to processed data
+* Add net columns to raw data and color-code
+* Add 24 h net charge to history plot
+* Fix spurious Unicode BOM in Readme
+
+
+
 ## Version 0.2.4 (2019-12-11)
 
 Bugfix release with the following changes:
+
 * Ensure website template is properly packaged with source and binary dists
 * Fix fragile paths to readme and version file in setup.py
 * Remove no longer needed matplotlib spec in requirements file
+
 
 
 ## Version 0.2.3 (2019-11-18)
