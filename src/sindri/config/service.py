@@ -13,7 +13,7 @@ USER_HOME = sindri.utils.misc.get_actual_home_dir()
 
 SERVICE_DEFAULTS = {
     "Unit": {
-        "Description": "Sindri Server Service",
+        "Description": "Server to recieve and visualize data from IoT sensors",
         "Wants": (
             "network-online.target systemd-time-wait-sync.service "
             "systemd-timesyncd.service"
