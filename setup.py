@@ -53,10 +53,10 @@ website_template_files = [
 setuptools.setup(
     name=PROJECT_NAME,
     version=version["__version__"],
-    author="C.A.M. Gerlach and the HAMMA group",
+    author="C.A.M. Gerlach/UAH HAMMA group",
     author_email="CAM.Gerlach@Gerlach.CAM",
-    description=("A package for data logging and management "
-                 "of HAMMA lightning sensors."),
+    description=("Receive, process, monitor, store and serve data from "
+                 "scientific IoT sensors. Part of the Mjolnir system."),
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="iot lightning sensor remote control research m2m server web",
