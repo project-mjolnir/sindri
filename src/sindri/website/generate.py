@@ -320,6 +320,14 @@ def generate_singlepage_data(page_blocks, full_data,
             continue
         input_path = Path(block["args"]["data_args"]
                           .get("input_path", input_path_default))
+
+        # Handle input path if it is a glob
+        if "*" in input_path.stem or "?" in input_path.stem:
+            input_path = Path(input_path).expanduser()
+            input_path = Path(list(
+                input_path.parents[0].glob(input_path.stem))[0])
+            block["args"]["data_args"]["input_path"] = Path(input_path)
+
         if input_path is not None and output_path is not None:
             input_path = input_path.expanduser()
             update_needed = check_update(

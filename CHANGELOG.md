@@ -1,5 +1,14 @@
 # Sindri Changelog
 
+## Version 0.2.6 (2020-03-20)
+
+Compat and bugfix release with the following changes:
+
+* Update search paths to find Brokkr 0.3.0 telemetry and log data for hamma
+* Automatically select latest log when multiple systems' logs are found
+* Avoid requiring network-online service that incurs a large wait at startup
+
+
 
 ## Version 0.2.5 (2020-01-24)
 

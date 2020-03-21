@@ -661,7 +661,7 @@ LOG_SUMMARY_METADATA = {
     }
 
 LOG_SUMMARY_DATA_ARGS = {
-    "input_path": "~/brokkr.log",
+    "input_path": "~/brokkr/hamma/log/brokkr_hamma_*.log",
     "output_path": "brokkr_log_latest.txt",
     "n_lines": 30,
     }
@@ -813,7 +813,7 @@ LOG_FULL_METADATA = {
     }
 
 LOG_FULL_DATA_ARGS = {
-    "input_path": "~/brokkr.log",
+    "input_path": "~/brokkr/hamma/log/brokkr_hamma_*.log",
     "output_path": "brokkr_log_full.txt",
     "n_lines": None,
     }
