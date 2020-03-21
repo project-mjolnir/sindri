@@ -13,8 +13,8 @@ import pandas as pd
 import sindri.utils.misc
 
 
-DATA_DIR_DEFAULT = Path.home() / "data" / "monitoring"
-GLOB_PATTERN_DEFAULT = "hamma*_????-??-??.csv"
+DATA_DIR_DEFAULT = Path.home() / "brokkr" / "hamma" / "telemetry"
+GLOB_PATTERN_DEFAULT = "telemetry_hamma_???_????-??-??.csv"
 
 FIGSIZE_DEFAULT = (8, 24)
 

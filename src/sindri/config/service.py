@@ -15,11 +15,10 @@ SERVICE_DEFAULTS = {
     "Unit": {
         "Description": "Sindri Server Service",
         "Wants": (
-            "network-online.target systemd-time-wait-sync.service "
-            "systemd-timesyncd.service"
+            "systemd-time-wait-sync.service systemd-timesyncd.service"
             ),
         "After": (
-            "time-sync.target network-online.target multi-user.target "
+            "time-sync.target multi-user.target "
             "systemd-time-wait-sync.service systemd-timesyncd.service "
             "brokkr.service"
             ),
