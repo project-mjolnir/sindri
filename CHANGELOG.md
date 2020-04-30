@@ -1,5 +1,15 @@
 # Sindri Changelog
 
+
+## Version 0.2.7 (2020-04-29)
+
+Compat and bugfix release with the following changes:
+
+* Handle bytes values as GB rather than B as used by Brokkr >=0.3.x
+* Fix warning parsing dates with timezone offset appended
+
+
+
 ## Version 0.2.6 (2020-03-20)
 
 Compat and bugfix release with the following changes:

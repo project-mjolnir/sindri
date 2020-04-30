@@ -29,9 +29,9 @@ THEME_BG_ACCENT_COLOR = "#333333"
 
 STANDARD_COL_CONVERSIONS = {
     "runtime": (1 / (60 * 60), 2),
-    "bytes_read": (1 / 1e9, 2),
-    "bytes_written": (1 / 1e9, 2),
-    "bytes_remaining": (1 / 1e9, 2),
+    "bytes_read": (1, 2),
+    "bytes_written": (1, 2),
+    "bytes_remaining": (1, 2),
     }
 
 LOG_REPLACE_ITEMS = [

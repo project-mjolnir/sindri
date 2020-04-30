@@ -44,8 +44,8 @@ CALCULATED_COLUMNS = (
                  / (60 * 60 * 24))),
     ("trigger_delta", "valid_packets",
      (lambda full_data: round(
-         -1 * full_data["bytes_remaining"].diff(1)
-         / (sindri.utils.misc.TRIGGER_SIZE_MB * 1e6)).clip(lower=0))),
+         -1e3 * full_data["bytes_remaining"].diff(1)
+         / sindri.utils.misc.TRIGGER_SIZE_MB).clip(lower=0))),
     ("trigger_rate_1min", "trigger_delta",
      lambda full_data: full_data["trigger_delta"]
      / round(full_data["time"].diff(1).dt.total_seconds() / 60)),
@@ -58,8 +58,8 @@ CALCULATED_COLUMNS = (
      full_data["trigger_delta"].rolling(60, min_periods=6).mean()
      / round(full_data["time"].diff(60).dt.total_seconds() / (60 * 60))),
     ("triggers_remaining", "bytes_remaining",
-     lambda full_data: round(full_data["bytes_remaining"]
-                             / (1e6 * sindri.utils.misc.TRIGGER_SIZE_MB))),
+     lambda full_data: round(full_data["bytes_remaining"] * 1e3
+                             / sindri.utils.misc.TRIGGER_SIZE_MB)),
     )
 
 
@@ -100,8 +100,9 @@ def preprocess_status_data(raw_status_data, decimate=None,
         status_data = raw_status_data.iloc[::decimate, :]
     else:
         status_data = raw_status_data
-    status_data["time"] = pd.to_datetime(status_data["time"],
-                                         format="%Y-%m-%d %H:%M:%S.%f")
+    status_data["time"] = pd.to_datetime(
+        status_data["time"],
+        format="%Y-%m-%d %H:%M:%S.%f%z").dt.tz_localize(None)
     status_data.set_index("time", drop=False, inplace=True)
     status_data = status_data[status_data.index.notnull()]
 
