@@ -26,9 +26,9 @@ CALCULATED_COLUMNS = (
     ("power_net", "power_load",
      lambda full_data:
          (full_data["power_out"] - full_data["power_load"] - POWER_IDLE_W)),
-    ("charge_net_24h", "power_net",
+    ("ahnet_daily", "ahl_daily",
      lambda full_data:
-         full_data["power_net"].rolling("24h", min_periods=2).sum() / 60),
+         (full_data["ahc_daily"] - full_data["ahl_daily"])),
     ("sensor_uptime", "vb_max",
      lambda full_data: full_data["sequence_count"] / (60 * 60)),
     ("crc_errors_delta", "crc_errors",
@@ -36,27 +36,27 @@ CALCULATED_COLUMNS = (
     ("crc_errors_hourly", "crc_errors_delta",
      lambda full_data:
          full_data["crc_errors_delta"].rolling(60, min_periods=2).sum()
-         / round(full_data["time"].diff(60).dt.total_seconds() / (60 * 60))),
+         / (round(full_data["time"].diff(60).dt.total_seconds()) / (60 * 60))),
     ("crc_errors_daily", "crc_errors_hourly",
      lambda full_data:
          full_data["crc_errors_delta"].rolling(60 * 24, min_periods=2).sum()
-         / round(full_data["time"].diff(60 * 24).dt.total_seconds()
-                 / (60 * 60 * 24))),
+         / (round(full_data["time"].diff(60 * 24).dt.total_seconds())
+            / (60 * 60 * 24))),
     ("trigger_delta", "valid_packets",
      (lambda full_data: round(
          -1e3 * full_data["bytes_remaining"].diff(1)
          / sindri.utils.misc.TRIGGER_SIZE_MB).clip(lower=0))),
     ("trigger_rate_1min", "trigger_delta",
      lambda full_data: full_data["trigger_delta"]
-     / round(full_data["time"].diff(1).dt.total_seconds() / 60)),
+     / (round(full_data["time"].diff(1).dt.total_seconds()) / 60)),
     ("trigger_rate_5min", "trigger_rate_1min",
      lambda full_data:
      full_data["trigger_delta"].rolling(5, min_periods=2).mean()
-     / round(full_data["time"].diff(5).dt.total_seconds() / (60 * 5))),
+     / (round(full_data["time"].diff(5).dt.total_seconds()) / (60 * 5))),
     ("trigger_rate_1hr", "trigger_rate_5min",
      lambda full_data:
      full_data["trigger_delta"].rolling(60, min_periods=6).mean()
-     / round(full_data["time"].diff(60).dt.total_seconds() / (60 * 60))),
+     / (round(full_data["time"].diff(60).dt.total_seconds()) / (60 * 60))),
     ("triggers_remaining", "bytes_remaining",
      lambda full_data: round(full_data["bytes_remaining"] * 1e3
                              / sindri.utils.misc.TRIGGER_SIZE_MB)),
@@ -102,7 +102,7 @@ def preprocess_status_data(raw_status_data, decimate=None,
         status_data = raw_status_data
     status_data["time"] = pd.to_datetime(
         status_data["time"],
-        format="%Y-%m-%d %H:%M:%S.%f%z").dt.tz_localize(None)
+        format="%Y-%m-%d %H:%M:%S.%f").dt.tz_localize(None)
     status_data.set_index("time", drop=False, inplace=True)
     status_data = status_data[status_data.index.notnull()]
 
