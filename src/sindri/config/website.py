@@ -19,7 +19,7 @@ from sindri.website.templates import (
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
-STATUS_UPDATE_INTERVAL_SLOW_SECONDS = 300
+STATUS_UPDATE_INTERVAL_SLOW_SECONDS = 600
 
 THEME_FG_COLOR = "white"
 THEME_BG_ACCENT_COLOR = "#333333"
@@ -29,9 +29,9 @@ THEME_BG_ACCENT_COLOR = "#333333"
 
 STANDARD_COL_CONVERSIONS = {
     "runtime": (1 / (60 * 60), 2),
-    "bytes_read": (1 / 1e9, 2),
-    "bytes_written": (1 / 1e9, 2),
-    "bytes_remaining": (1 / 1e9, 2),
+    "bytes_read": (1, 2),
+    "bytes_written": (1, 2),
+    "bytes_remaining": (1, 2),
     }
 
 LOG_REPLACE_ITEMS = [
@@ -53,7 +53,7 @@ VARIABLE_NAME_MAP = {
     "power_out": "Charge Power",
     "vb_ref": "Target Voltage",
     "power_load": "Load Power",
-    "charge_net_24h": "Daily Net Charge",
+    "ahnet_daily": "Net Ah/Day",
     "t_batt": "Battery Temp",
     "led_state": "LED State",
     "ping": "Ping Error Code",
@@ -83,7 +83,7 @@ STANDARD_LAYOUTS = {
     "led_state": {"dtick": 5, "range": [0, 20], "suffix": ""},
     "power_out": {"dtick": 75, "range": [0, 225], "suffix": " W"},
     "power_load": {"dtick": 10, "range": [0, 30], "suffix": " W"},
-    "charge_net_24h": {"dtick": 250, "range": [-500, 500], "suffix": " Wh"},
+    "ahnet_daily": {"dtick": 25, "range": [-50, 50], "suffix": " Ah"},
     "crc_errors": {"dtick": 25, "range": [0, 100], "suffix": ""},
     "crc_errors_delta": {"dtick": 1, "range": [0, 5], "suffix": ""},
     "crc_errors_hourly": {"dtick": 5, "range": [0, 10], "suffix": ""},
@@ -109,7 +109,7 @@ LAYOUT_MAP = {
     "led_state": STANDARD_LAYOUTS["led_state"],
     "power_out": STANDARD_LAYOUTS["power_out"],
     "power_load": STANDARD_LAYOUTS["power_load"],
-    "charge_net_24h": STANDARD_LAYOUTS["charge_net_24h"],
+    "ahnet_daily": STANDARD_LAYOUTS["ahnet_daily"],
     "sensor_uptime": STANDARD_LAYOUTS["uptime"],
     "crc_errors": STANDARD_LAYOUTS["crc_errors"],
     "crc_errors_delta": STANDARD_LAYOUTS["crc_errors_delta"],
@@ -153,7 +153,7 @@ STANDARD_COLOR_TABLES = {
     "power_load": [[1, 6, 9, 10, 15.5, 18, 19, 20, 24],
                    STANDARD_COLORS[::-1] + ["teal"] + STANDARD_COLORS[1:]],
     "power_net": [[-15, -5, 0, 15], STANDARD_COLORS[::-1]],
-    "charge_net_24h": [[-100, -50, 0, 100], STANDARD_COLORS[::-1]],
+    "ahnet_daily": [[-20, -10, 0, 10], STANDARD_COLORS[::-1]],
     "sensor_restarts": [[0.5, 1.5, 4.5, 24.5], STANDARD_COLORS],
     "crc_errors": [[0.98, 5, 12.5, 50], STANDARD_COLORS],
     "crc_errors_delta": [[0.1, 0.9, 1.5, 2.5], STANDARD_COLORS],
@@ -191,7 +191,7 @@ COLOR_TABLE_MAP = {
     "power_out": STANDARD_COLOR_TABLES["power_out"],
     "power_load": STANDARD_COLOR_TABLES["power_load"],
     "power_net": STANDARD_COLOR_TABLES["power_net"],
-    "charge_net_24h": STANDARD_COLOR_TABLES["charge_net_24h"],
+    "ahnet_daily": STANDARD_COLOR_TABLES["ahnet_daily"],
     "sweep_vmp": STANDARD_COLOR_TABLES["array_voltage"],
     "sweep_pmax": STANDARD_COLOR_TABLES["power_out"],
     "sweep_voc": STANDARD_COLOR_TABLES["array_voltage"],
@@ -741,7 +741,7 @@ HISTORY_PLOT_SUBPLOTS = {
     "charge_state": {},
     "power_load": {},
     "load_state": {},
-    "charge_net_24h": {},
+    "ahnet_daily": {},
     "t_batt": {},
     "led_state": {},
     "ping": {},

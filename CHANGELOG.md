@@ -1,5 +1,26 @@
 # Sindri Changelog
 
+
+## Version 0.2.8 (2020-05-15)
+
+Bugfix release with the following changes:
+
+* Fix incorrect calculation/rounding of CRC and trigger count values
+* Change net charge calculation to use actual daily Ah values
+* Lengthen refresh period from 5 min to 10 min for long-fuse data
+* Improve compat of date parser
+
+
+
+## Version 0.2.7 (2020-04-29)
+
+Compat and bugfix release with the following changes:
+
+* Handle bytes values as GB rather than B as used by Brokkr >=0.3.x
+* Fix warning parsing dates with timezone offset appended
+
+
+
 ## Version 0.2.6 (2020-03-20)
 
 Compat and bugfix release with the following changes:
