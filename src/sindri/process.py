@@ -79,7 +79,7 @@ def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
     files_to_load = get_status_data_paths(
         n_days=n_days, lag=lag, data_dir=data_dir, glob_pattern=glob_pattern)
     status_data = pd.concat(
-        (pd.read_csv(file) for file in files_to_load),
+        (pd.read_csv(file, error_bad_lines=False) for file in files_to_load),
         ignore_index=True, sort=False)
     return status_data
 
