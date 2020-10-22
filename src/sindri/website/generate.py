@@ -384,7 +384,7 @@ def generate_daily_data(
 
 
 def generate_site_data(content_pages, project_path=None):
-    full_data = sindri.process.ingest_status_data(n_days=None)
+    full_data = sindri.process.ingest_status_data(n_days=30)
     input_path_default = sindri.process.get_status_data_paths(n_days=1)[0]
     if project_path:
         project_path = Path(project_path) / ASSET_PATH
