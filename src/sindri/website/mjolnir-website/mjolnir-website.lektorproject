@@ -5,7 +5,7 @@ url_style = relative
 included_assets = .nojekyll
 
 [servers.ghpages]
-target = rsync://pi@104.131.44.197/var/www/hamma.dev/public_html/hamma1
+target = rsync://pi@hamma.dev/var/www/hamma.dev/public_html/hamma1
 
 [theme_settings]
 title = HAMMA Mjolnir Status Dashboard
