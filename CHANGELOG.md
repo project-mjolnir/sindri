@@ -1,6 +1,16 @@
 # Sindri Changelog
 
 
+## Version 0.2.9 (2020-10-23)
+
+Maintenance release with the following changes:
+
+* Improve performance of website generation
+* Update default config to point to new server
+* Ignore errors when parsing the sensor log file
+
+
+
 ## Version 0.2.8 (2020-05-15)
 
 Bugfix release with the following changes:
