@@ -1,11 +1,11 @@
 [project]
 name = HAMMA Mjolnir Status Dashboard
 themes = lektor-icon
-url_style = absolute
+url_style = relative
 included_assets = .nojekyll
 
 [servers.ghpages]
-target = ghpages+ssh://hamma-dev/mjolnir-website?cname=www.hamma.dev
+target = rsync://pi@hamma.dev/var/www/hamma.dev/public_html/hamma1
 
 [theme_settings]
 title = HAMMA Mjolnir Status Dashboard
