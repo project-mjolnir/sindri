@@ -410,16 +410,16 @@ STATUS_DASHBOARD_PLOTS = {
             },
         "fast_update": False,
         },
-    "chargestate": {
+    "ledstate": {
         "plot_type": "numeric",
         "plot_data": {
             "delta_period": "1H",
             "threshold_period": "24H",
             "threshold_type": "max",
-            "variable": "charge_state",
+            "variable": "led_state",
             },
         "plot_metadata": {
-            "plot_title": "Charge State",
+            "plot_title": "Battery LED State",
             "plot_description": "",
             },
         "plot_params": {
