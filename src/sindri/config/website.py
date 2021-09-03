@@ -953,25 +953,25 @@ SENSOR_PAGE_BLOCKS = {
         "metadata": STATUS_DASHBOARD_METADATA,
         "args": STATUS_DASHBOARD_ARGS,
         },
-    "raw": {
-        "type": "table",
-        "metadata": RAW_OUTPUT_METADATA,
-        "args": RAW_OUTPUT_ARGS,
-        },
     "plot": {
         "type": "plot",
         "metadata": HISTORY_PLOT_METADATA,
         "args": HISTORY_PLOT_ARGS,
         },
-    "log": {
-        "type": "text",
-        "metadata": LOG_SUMMARY_METADATA,
-        "args": LOG_SUMMARY_ARGS,
+    "raw": {
+        "type": "table",
+        "metadata": RAW_OUTPUT_METADATA,
+        "args": RAW_OUTPUT_ARGS,
         },
     "archive": {
         "type": "table",
         "metadata": ARCHIVE_SUMMARY_METADATA,
         "args": ARCHIVE_SUMMARY_ARGS,
+        },
+    "log": {
+        "type": "text",
+        "metadata": LOG_SUMMARY_METADATA,
+        "args": LOG_SUMMARY_ARGS,
         },
     }
 
