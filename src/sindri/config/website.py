@@ -149,8 +149,10 @@ STANDARD_COLOR_TABLES = {
     "led_state": [[-0.5, 2.5, 6.5, 9.5, 10.5, 11.5],
                   ["red", "gray", "green", "yellow", "orange", "red", "maroon"]],
     "power_out": [[0.1, 6, 12, 24], STANDARD_COLORS[::-1]],
-    "power_load": [[1, 5, 11, 22, 26, 28],
-    			   ["black", "orange", "yellow", "gray", "green", "orange", "red"]], 
+    "power_load": [
+        [1, 5, 11, 22, 26, 28],
+        ["black", "orange", "yellow", "gray", "green", "orange", "red"],
+        ],
     "power_net": [[-15, -5, 0, 15], STANDARD_COLORS[::-1]],
     "ahnet_daily": [[-20, -10, 0, 10], STANDARD_COLORS[::-1]],
     "sensor_restarts": [[0.5, 1.5, 4.5, 24.5], STANDARD_COLORS],
@@ -419,7 +421,7 @@ STATUS_DASHBOARD_PLOTS = {
             "variable": "led_state",
             },
         "plot_metadata": {
-            "plot_title": "Battery LED State",
+            "plot_title": "LED State",
             "plot_description": "",
             },
         "plot_params": {
