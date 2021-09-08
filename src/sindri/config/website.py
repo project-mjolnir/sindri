@@ -139,19 +139,20 @@ STANDARD_COLOR_TABLES = {
     "load_current": [[0.1, 0.4, 0.6, 0.7, 1.5, 1.7, 1.8, 1.9],
                      STANDARD_COLORS[::-1] + STANDARD_COLORS[1:]],
     "temperature": [[-10, 0, 10, 40, 50, 60, 70], STANDARD_COLORS_TEMP],
-    "charge_state": [[i + 0.5 for i in range(8)],
-                     ["gray", "blue", "maroon", "orange", "red",
-                      "yellow", "lime", "green", "teal"]],
+    "charge_state": [[-0.5, 2.5, 3.5, 4.5, 8.5],
+                     ["red", "gray", "black", "red", "green", "red"]],
     "reference_voltage": [[12.5, 12.8, 13.1, 13.9, 14.9, 15.0, 15.1, 15.5],
                           STANDARD_COLORS[::-1] + STANDARD_COLORS[1:]],
     "load_state": [[i + 0.5 for i in range(5)],
                    ["gray", "green", "yellow", "orange", "red", "maroon"]],
     "alarm": [[-0.5, 0.5, 500], ["red", "green", "lime", "red"]],
-    "led_state": [[-0.5, 2.5, 6.5, 8.5],
-                  ["red", "gray", "green", "yellow", "red"]],
+    "led_state": [[-0.5, 2.5, 6.5, 9.5, 10.5, 11.5],
+                  ["red", "gray", "green", "yellow", "orange", "red", "maroon"]],
     "power_out": [[0.1, 6, 12, 24], STANDARD_COLORS[::-1]],
-    "power_load": [[1, 6, 9, 10, 15.5, 18, 19, 20, 24],
-                   STANDARD_COLORS[::-1] + ["teal"] + STANDARD_COLORS[1:]],
+    "power_load": [
+        [1, 5, 11, 22, 26, 28],
+        ["black", "orange", "yellow", "gray", "green", "orange", "red"],
+        ],
     "power_net": [[-15, -5, 0, 15], STANDARD_COLORS[::-1]],
     "ahnet_daily": [[-20, -10, 0, 10], STANDARD_COLORS[::-1]],
     "sensor_restarts": [[0.5, 1.5, 4.5, 24.5], STANDARD_COLORS],
@@ -411,16 +412,16 @@ STATUS_DASHBOARD_PLOTS = {
             },
         "fast_update": False,
         },
-    "chargestate": {
+    "ledstate": {
         "plot_type": "numeric",
         "plot_data": {
             "delta_period": "1H",
             "threshold_period": "24H",
             "threshold_type": "max",
-            "variable": "charge_state",
+            "variable": "led_state",
             },
         "plot_metadata": {
-            "plot_title": "Charge State",
+            "plot_title": "LED State",
             "plot_description": "",
             },
         "plot_params": {
@@ -953,25 +954,25 @@ SENSOR_PAGE_BLOCKS = {
         "metadata": STATUS_DASHBOARD_METADATA,
         "args": STATUS_DASHBOARD_ARGS,
         },
-    "raw": {
-        "type": "table",
-        "metadata": RAW_OUTPUT_METADATA,
-        "args": RAW_OUTPUT_ARGS,
-        },
     "plot": {
         "type": "plot",
         "metadata": HISTORY_PLOT_METADATA,
         "args": HISTORY_PLOT_ARGS,
         },
-    "log": {
-        "type": "text",
-        "metadata": LOG_SUMMARY_METADATA,
-        "args": LOG_SUMMARY_ARGS,
+    "raw": {
+        "type": "table",
+        "metadata": RAW_OUTPUT_METADATA,
+        "args": RAW_OUTPUT_ARGS,
         },
     "archive": {
         "type": "table",
         "metadata": ARCHIVE_SUMMARY_METADATA,
         "args": ARCHIVE_SUMMARY_ARGS,
+        },
+    "log": {
+        "type": "text",
+        "metadata": LOG_SUMMARY_METADATA,
+        "args": LOG_SUMMARY_ARGS,
         },
     }
 
