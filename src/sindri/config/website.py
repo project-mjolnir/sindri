@@ -713,7 +713,7 @@ ARCHIVE_SUMMARY_DATA_ARGS = {
     "sort_rows": False,
     "reset_index": True,
     "index_postprocess": lambda index_col: [
-        "<a href=/daily?date={idx}>{idx}</a>".format(
+        "<a href=./daily?date={idx}>{idx}</a>".format(
             idx=index_item.date())
         for index_item in index_col],
     "final_colnames": ["Date", "Rsrt", "NAs", "Vbat", "Pin", "Pout", "Tmax",
