@@ -293,6 +293,7 @@ def generate_plot_data(
     if output_path:
         plot_data_json = (
             plot_data.where(np.isfinite(plot_data), None)
+            .replace({np.nan: None})
             .to_dict(orient="list"))
         if plot_data.index.name:
             index_name = plot_data.index.name
