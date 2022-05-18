@@ -70,10 +70,10 @@ class CustomJSONEncoder(json.JSONEncoder):
             return int(obj)
         if isinstance(obj, np.floating):
             return float(obj)
-        if isinstance(obj, (np.bool, np.bool_)):
+        if isinstance(obj, np.bool_):
             return bool(obj)
         if isinstance(obj, np.ndarray):
-            return obj.to_list()
+            return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
 
