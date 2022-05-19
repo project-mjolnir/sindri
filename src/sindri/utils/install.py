@@ -24,16 +24,11 @@ def log_setup(verbose=None):
     logging.basicConfig(stream=sys.stdout, level=logging_level)
 
 
-def install_sindri_service(platform=None, verbose=None):
+def install_sindri_service(platform=None, mode="client", verbose=None):
     log_setup(verbose)
 
     serviceinstaller.install_service(
-        sindri.config.service.SERVICE_DEFAULTS,
-        service_filename=sindri.config.service.SERVICE_FILENAME,
-        services_enable=sindri.config.service.SERVICES_ENABLE,
-        services_disable=sindri.config.service.SERVICES_DISABLE,
-        platform=platform,
-    )
+        platform=platform, **sindri.config.service.SERVICE_CONFIG[mode])
 
 
 if __name__ == "__main__":

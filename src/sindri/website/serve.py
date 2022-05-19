@@ -27,9 +27,9 @@ SOURCE_IGNORE_PATTERNS = (
 
 
 @functools.lru_cache
-def get_content_config(dashboard=None):
+def get_content_config(dashboard=None, mode=None):
     return sindri.config.website.load_dashboard_content_config(
-        dashboard=dashboard)
+        dashboard=dashboard, mode=mode)
 
 
 def get_website_cache_dir(cache_dir=None):
@@ -43,19 +43,22 @@ def get_website_cache_dir(cache_dir=None):
         return Path(cache_dir)
 
 
-def update_data(project_path=LEKTOR_PROJECT_PATH):
+def update_data(project_path=LEKTOR_PROJECT_PATH, mode=None):
     sindri.website.generate.generate_site_data(
-        content_pages=get_content_config(), project_path=project_path)
+        content_pages=get_content_config(mode=mode), project_path=project_path)
 
 
-def update_project(project_path=LEKTOR_PROJECT_PATH):
-    update_data(project_path=project_path)
+def update_project(project_path=LEKTOR_PROJECT_PATH, mode=None):
+    update_data(project_path=project_path, mode=mode)
     sindri.website.generate.generate_and_write_site_content(
-        content_pages=get_content_config(), project_path=project_path)
+        content_pages=get_content_config(mode=mode), project_path=project_path)
 
 
-def deploy_project(source_path=LEKTOR_SOURCE_PATH,
-                   output_path=LEKTOR_PROJECT_PATH):
+def deploy_project(
+        source_path=LEKTOR_SOURCE_PATH,
+        output_path=LEKTOR_PROJECT_PATH,
+        mode=None,
+        ):
     os.makedirs(output_path, exist_ok=True)
     try:
         shutil.rmtree(output_path, onerror=sindri.utils.misc.force_delete)
@@ -63,7 +66,7 @@ def deploy_project(source_path=LEKTOR_SOURCE_PATH,
         pass
     shutil.copytree(source_path, output_path,
                     ignore=shutil.ignore_patterns(*SOURCE_IGNORE_PATTERNS))
-    update_project(project_path=output_path)
+    update_project(project_path=output_path, mode=mode)
 
 
 def run_lektor(command, project_path=LEKTOR_PROJECT_PATH, verbose=1):
@@ -77,15 +80,14 @@ def run_lektor(command, project_path=LEKTOR_PROJECT_PATH, verbose=1):
     if command == "server":
         subprocess.Popen(lektor_call, cwd=project_path, **extra_args)
     else:
-        subprocess.run(lektor_call, check=True,
-                       cwd=project_path, **extra_args)
+        subprocess.run(lektor_call, check=True, cwd=project_path, **extra_args)
 
 
 def deploy_website(mode="test", cache_dir=None, wait_exit=True, verbose=0):
     # Fail fast if Lektor is not installed in the current environment
     import lektor
     cache_dir = get_website_cache_dir(cache_dir)
-    deploy_project(output_path=cache_dir)
+    deploy_project(output_path=cache_dir, mode=mode)
 
     if mode == "test":
         run_lektor(command="server", project_path=cache_dir,
@@ -96,7 +98,7 @@ def deploy_website(mode="test", cache_dir=None, wait_exit=True, verbose=0):
                     time.sleep(1)
             except KeyboardInterrupt:
                 print("Keyboard interrupt recieved; exiting.")
-    elif mode == "production":
+    elif mode in {"client", "server"}:
         run_lektor(command="build", project_path=cache_dir,
                    verbose=verbose + 1)
         run_lektor(command="deploy ghpages", project_path=cache_dir,
@@ -112,8 +114,8 @@ def start_serving_website(
     # Fail fast if Lektor is not installed in the current environment
     import lektor
     cache_dir = get_website_cache_dir(cache_dir)
-    deploy_website(mode=mode, cache_dir=cache_dir,
-                   wait_exit=False, verbose=verbose)
+    deploy_website(
+        mode=mode, cache_dir=cache_dir, wait_exit=False, verbose=verbose)
 
     try:
         # Initial 60 s wait to ensure site fully builds once before rerunning
@@ -122,8 +124,8 @@ def start_serving_website(
                 time.sleep(1)
         while True:
             sindri.utils.misc.delay_until_desired_time(update_interval_s)
-            update_data(project_path=cache_dir)
-            if mode == "production":
+            update_data(project_path=cache_dir, mode=mode)
+            if mode in {"client", "server"}:
                 run_lektor(command="build", project_path=cache_dir,
                            verbose=verbose)
                 run_lektor(command="deploy ghpages", project_path=cache_dir,
