@@ -3,6 +3,7 @@ Code to generate, build and deploy the HAMMA Mjolnir status website.
 """
 
 # Standard library imports
+import functools
 import os
 from pathlib import Path
 import shutil
@@ -25,6 +26,12 @@ SOURCE_IGNORE_PATTERNS = (
     "temp", "*.tmp", "*.temp", "*.bak", "*.log", "*.orig", "example-site")
 
 
+@functools.lru_cache
+def get_content_config(dashboard=None):
+    return sindri.config.website.load_dashboard_content_config(
+        dashboard=dashboard)
+
+
 def get_website_cache_dir(cache_dir=None):
     if cache_dir is None:
         return LEKTOR_PROJECT_PATH
@@ -38,15 +45,13 @@ def get_website_cache_dir(cache_dir=None):
 
 def update_data(project_path=LEKTOR_PROJECT_PATH):
     sindri.website.generate.generate_site_data(
-        content_pages=sindri.config.website.CONTENT_PAGES,
-        project_path=project_path)
+        content_pages=get_content_config(), project_path=project_path)
 
 
 def update_project(project_path=LEKTOR_PROJECT_PATH):
     update_data(project_path=project_path)
     sindri.website.generate.generate_and_write_site_content(
-        content_pages=sindri.config.website.CONTENT_PAGES,
-        project_path=project_path)
+        content_pages=get_content_config(), project_path=project_path)
 
 
 def deploy_project(source_path=LEKTOR_SOURCE_PATH,

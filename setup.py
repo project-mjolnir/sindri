@@ -69,6 +69,7 @@ setuptools.setup(
         },
     python_requires=">=3.6",
     install_requires=[
+        "brokkr>=0.4.0",
         "jinja2>=2,<3",
         "lektor>=3.1.3,<4",
         "MarkupSafe>=1,<2",
