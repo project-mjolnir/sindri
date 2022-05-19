@@ -1,5 +1,6 @@
 temp.py
 temp/
+_sindri_deploy/
 
 /env/
 *.gz

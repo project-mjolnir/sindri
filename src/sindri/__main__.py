@@ -24,6 +24,7 @@ def generate_argparser_main():
     parsers_add_mode_arg = []
     parsers_add_update_interval_arg = []
     parsers_add_temp_cache_arg = []
+    parsers_add_dest_arg = []
     parsers_add_verbose_arg = []
 
     # Parser for the version subcommand
@@ -40,6 +41,7 @@ def generate_argparser_main():
         argument_default=argparse.SUPPRESS)
     parsers_add_mode_arg.append(parser_start)
     parsers_add_update_interval_arg.append(parser_start)
+    parsers_add_dest_arg.append(parser_start)
     parsers_add_verbose_arg.append(parser_start)
 
     # Parser for the deploy-website subcommand
@@ -48,6 +50,7 @@ def generate_argparser_main():
         argument_default=argparse.SUPPRESS)
     parsers_add_mode_arg.append(parser_deploy)
     parsers_add_temp_cache_arg.append(parser_deploy)
+    parsers_add_dest_arg.append(parser_deploy)
     parsers_add_verbose_arg.append(parser_deploy)
 
     # Parser for the serve-website subcommand
@@ -57,6 +60,7 @@ def generate_argparser_main():
     parsers_add_mode_arg.append(parser_serve)
     parsers_add_update_interval_arg.append(parser_serve)
     parsers_add_temp_cache_arg.append(parser_serve)
+    parsers_add_dest_arg.append(parser_serve)
     parsers_add_verbose_arg.append(parser_serve)
 
     # Parser for the install-service subcommand
@@ -66,6 +70,8 @@ def generate_argparser_main():
     parser_install_service.add_argument(
         "--platform", choices=("linux", ),
         help="Manually override automatic platform detection")
+    parser_install_service.add_argument(
+        "--extra-args", help="Extra args ")
     parsers_add_mode_arg.append(parser_install_service)
     parsers_add_verbose_arg.append(parser_install_service)
 
@@ -89,6 +95,9 @@ def generate_argparser_main():
                 " on-demand simultantiously with a production site). "
                 "If not passed, will use the default primary cache dir."
                 )),
+    for parser in parsers_add_dest_arg:
+        parser.add_argument(
+            "--dest-dir", help="Path to which to copy the site build output")
     for parser in parsers_add_verbose_arg:
         parser.add_argument(
             "-v", "--verbose", action="count", help="Increase verbosity")

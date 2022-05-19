@@ -4,7 +4,10 @@ themes = lektor-icon
 url_style = relative
 included_assets = .nojekyll
 
-[servers.ghpages]
+[servers.hammadev]
+name = HAMMA.dev VPS
+enabled = yes
+default = yes
 target = rsync://pi@hamma.dev/var/www/hamma.dev/public_html/hamma1
 
 [theme_settings]

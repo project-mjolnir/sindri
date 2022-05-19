@@ -4,6 +4,7 @@ Install Sindri service and other items.
 """
 
 # Standard library imports
+import copy
 import logging
 import sys
 
@@ -24,11 +25,15 @@ def log_setup(verbose=None):
     logging.basicConfig(stream=sys.stdout, level=logging_level)
 
 
-def install_sindri_service(platform=None, mode="client", verbose=None):
+def install_sindri_service(
+        platform=None, mode="client", extra_args="", verbose=None):
     log_setup(verbose)
 
-    serviceinstaller.install_service(
-        platform=platform, **sindri.config.service.SERVICE_CONFIG[mode])
+    service_config = copy.deepcopy(sindri.config.service.SERVICE_CONFIG[mode])
+    if extra_args:
+        settings = service_config["service_settings"]["Service"]
+        settings["ExecStart"] = settings["ExecStart"] + " " + extra_args
+    serviceinstaller.install_service(platform=platform, **service_config)
 
 
 if __name__ == "__main__":

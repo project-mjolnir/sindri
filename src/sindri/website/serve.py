@@ -21,6 +21,7 @@ LEKTOR_SOURCE_DIR = "mjolnir-website"
 LEKTOR_SOURCE_PATH = Path(__file__).parent / LEKTOR_SOURCE_DIR
 LEKTOR_PROJECT_PATH = (
     sindri.utils.misc.get_cache_dir() / "main" / LEKTOR_SOURCE_DIR)
+LEKTOR_DEST_PATH_DEFAULT = Path("_sindri_deploy")
 
 SOURCE_IGNORE_PATTERNS = (
     "temp", "*.tmp", "*.temp", "*.bak", "*.log", "*.orig", "example-site")
@@ -54,7 +55,7 @@ def update_project(project_path=LEKTOR_PROJECT_PATH, mode=None):
         content_pages=get_content_config(mode=mode), project_path=project_path)
 
 
-def deploy_project(
+def rebuild_project(
         source_path=LEKTOR_SOURCE_PATH,
         output_path=LEKTOR_PROJECT_PATH,
         mode=None,
@@ -69,25 +70,52 @@ def deploy_project(
     update_project(project_path=output_path, mode=mode)
 
 
-def run_lektor(command, project_path=LEKTOR_PROJECT_PATH, verbose=1):
+def run_lektor(command, args=(), project_path=LEKTOR_PROJECT_PATH, verbose=1):
     extra_args = {}
-    lektor_call = [sys.executable, "-m", "lektor", *command.split(" ")]
+    lektor_call = [sys.executable, "-m", "lektor", command, *args]
     if verbose <= 0:
         extra_args = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
     elif verbose >= 2 and command in {"server", "build"}:
         lektor_call.append("-v")
 
     if command == "server":
-        subprocess.Popen(lektor_call, cwd=project_path, **extra_args)
+        return subprocess.Popen(
+            lektor_call, cwd=project_path, **extra_args)
     else:
-        subprocess.run(lektor_call, check=True, cwd=project_path, **extra_args)
+        return subprocess.run(
+            lektor_call, check=True, cwd=project_path, **extra_args)
 
 
-def deploy_website(mode="test", cache_dir=None, wait_exit=True, verbose=0):
+def build_deploy_lektor(mode, cache_dir, dest_dir=None, verbose=0):
+    if mode == "server" and dest_dir is None:
+        dest_dir = LEKTOR_DEST_PATH_DEFAULT
+    run_lektor(command="build", project_path=cache_dir, verbose=verbose + 1)
+    if dest_dir:
+        build_dir_output = run_lektor(
+            "project-info",
+            args=["--output-path"],
+            project_path=cache_dir,
+            verbose=0,
+            )
+        build_dir = Path(build_dir_output.stdout.decode().strip())
+        dest_dir = Path(dest_dir)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(build_dir, dest_dir, dirs_exist_ok=True)
+    if mode == "client":
+        run_lektor(command="deploy", project_path=cache_dir, verbose=verbose)
+
+
+def deploy_website(
+        mode="test",
+        cache_dir=None,
+        dest_dir=None,
+        wait_exit=True,
+        verbose=0,
+        ):
     # Fail fast if Lektor is not installed in the current environment
     import lektor
     cache_dir = get_website_cache_dir(cache_dir)
-    deploy_project(output_path=cache_dir, mode=mode)
+    rebuild_project(output_path=cache_dir, mode=mode)
 
     if mode == "test":
         run_lektor(command="server", project_path=cache_dir,
@@ -99,23 +127,31 @@ def deploy_website(mode="test", cache_dir=None, wait_exit=True, verbose=0):
             except KeyboardInterrupt:
                 print("Keyboard interrupt recieved; exiting.")
     elif mode in {"client", "server"}:
-        run_lektor(command="build", project_path=cache_dir,
-                   verbose=verbose + 1)
-        run_lektor(command="deploy ghpages", project_path=cache_dir,
-                   verbose=verbose + 1)
+        build_deploy_lektor(
+            mode=mode,
+            cache_dir=cache_dir,
+            dest_dir=dest_dir,
+            verbose=verbose + 1,
+            )
 
 
 def start_serving_website(
         mode="test",
         update_interval_s=sindri.utils.misc.WEBSITE_UPDATE_INTERVAL_S,
         cache_dir=None,
+        dest_dir=None,
         verbose=0,
         ):
     # Fail fast if Lektor is not installed in the current environment
     import lektor
     cache_dir = get_website_cache_dir(cache_dir)
     deploy_website(
-        mode=mode, cache_dir=cache_dir, wait_exit=False, verbose=verbose)
+        mode=mode,
+        cache_dir=cache_dir,
+        dest_dir=dest_dir,
+        wait_exit=False,
+        verbose=verbose,
+        )
 
     try:
         # Initial 60 s wait to ensure site fully builds once before rerunning
@@ -126,9 +162,11 @@ def start_serving_website(
             sindri.utils.misc.delay_until_desired_time(update_interval_s)
             update_data(project_path=cache_dir, mode=mode)
             if mode in {"client", "server"}:
-                run_lektor(command="build", project_path=cache_dir,
-                           verbose=verbose)
-                run_lektor(command="deploy ghpages", project_path=cache_dir,
-                           verbose=verbose)
+                build_deploy_lektor(
+                    mode=mode,
+                    cache_dir=cache_dir,
+                    dest_dir=dest_dir,
+                    verbose=verbose,
+                    )
     except KeyboardInterrupt:
         print("Keyboard interrupt recieved; exiting.")
