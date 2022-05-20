@@ -46,7 +46,10 @@ def get_website_cache_dir(cache_dir=None):
 
 def update_data(project_path=LEKTOR_PROJECT_PATH, mode=None):
     sindri.website.generate.generate_site_data(
-        content_pages=get_content_config(mode=mode), project_path=project_path)
+        content_pages=get_content_config(mode=mode),
+        project_path=project_path,
+        mode=mode,
+        )
 
 
 def update_project(project_path=LEKTOR_PROJECT_PATH, mode=None):

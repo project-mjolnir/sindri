@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import shutil
 import time
+import traceback
 
 # Third party imports
 import numpy as np
@@ -36,8 +37,6 @@ DEFAULT_EXTENSION = "json"
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
 STATUS_UPDATE_INTERVAL_SLOW_SECONDS = 300
-
-
 DASHBOARD_DATA_ARGS_DEFAULT = {
     "data_functions": [
         lambda base_data, data_args: base_data.iloc[-1],
@@ -108,7 +107,11 @@ def write_lastupdate_json(path=None, lastupdate=None,
 
 
 def check_update(input_path, lastupdate_path):
-    current_lastupdate = Path(input_path).stat().st_mtime_ns // 1000000
+    if isinstance(input_path, (str, os.PathLike)):
+        input_path = [input_path]
+    current_lastupdate_times = [
+        Path(path).stat().st_mtime_ns for path in input_path]
+    current_lastupdate = max(current_lastupdate_times) // 1000000
     if Path(lastupdate_path).exists():
         with open(lastupdate_path, "r",
                   encoding="utf-8", newline="\n") as oldfile:
@@ -118,8 +121,8 @@ def check_update(input_path, lastupdate_path):
                 lastupdate_path, lastupdate=old_lastupdate["lastUpdate"],
                 lastupdate_data=current_lastupdate)
             return False
-    write_lastupdate_json(path=lastupdate_path,
-                          lastupdate_data=current_lastupdate)
+    write_lastupdate_json(
+        path=lastupdate_path, lastupdate_data=current_lastupdate)
     return True
 
 
@@ -180,6 +183,13 @@ def get_dashboard_plot_data(full_data, plot_type, **kwargs):
     data_args = copy.deepcopy(DASHBOARD_DATA_ARGS_DEFAULT)
     data_args.update(**kwargs)
 
+    if data_args.get("unit_id", None) is not None:
+        try:
+            full_data = full_data[data_args["unit_id"]]
+        except KeyError:
+            print(f'Unit {data_args["unit_id"]} data not found; skipping')
+            return [None] * 3
+
     plot_data = []
     if plot_type == "numeric":
         if callable(data_args["variable"]):
@@ -218,9 +228,7 @@ def get_dashboard_plot_data(full_data, plot_type, **kwargs):
 
 
 def generate_dashboard_data(
-        full_data, dashboard_plots,
-        output_path=None,
-        ):
+        full_data, dashboard_plots, output_path=None):
     dashboard_data = {}
     for plot_id, plot in dashboard_plots.items():
         if plot["plot_type"]:
@@ -230,9 +238,12 @@ def generate_dashboard_data(
                     plot_type=plot["plot_type"],
                     **plot["plot_data"],
                     )
-            except Exception as e:
-                print(str(type(e)), e)
-                plot_data = [None for __ in range(3)]
+            except Exception as error:
+                print("Error generating data for dashboard plot",
+                      plot_id, )
+                print(f"{type(error).__name__}: {error}")
+                traceback.print_exc()
+                plot_data = [None] * 3
             dashboard_data[plot_id] = plot_data
 
     if dashboard_data and output_path:
@@ -307,8 +318,21 @@ def generate_plot_data(
     return plot_data
 
 
-def generate_singlepage_data(page_blocks, full_data,
-                             input_path_default=None, output_path=None):
+def process_input_path(input_path):
+    if input_path is None:
+        return None
+
+    input_path = Path(input_path).expanduser()
+
+    # Handle input path if it is a glob
+    if "*" in input_path.stem or "?" in input_path.stem:
+        input_path = Path(list(
+            input_path.parents[0].glob(input_path.stem))[0])
+    return input_path
+
+
+def generate_singlepage_data(
+        page_blocks, full_data, input_path_default=None, output_path=None):
     data_function_map = {
         "dashboard": generate_dashboard_data,
         "table": generate_table_data,
@@ -319,18 +343,16 @@ def generate_singlepage_data(page_blocks, full_data,
     for section_id, block in page_blocks.items():
         if block["type"] == "generic":
             continue
-        input_path = Path(block["args"]["data_args"]
-                          .get("input_path", input_path_default))
 
-        # Handle input path if it is a glob
-        if "*" in input_path.stem or "?" in input_path.stem:
-            input_path = Path(input_path).expanduser()
-            input_path = Path(list(
-                input_path.parents[0].glob(input_path.stem))[0])
-            block["args"]["data_args"]["input_path"] = Path(input_path)
+        data_args = copy.deepcopy(block["args"]["data_args"])
+        input_path = data_args.get("input_path", input_path_default)
+
+        if isinstance(input_path, (str, os.PathLike)):
+            input_path = process_input_path(input_path)
+        elif input_path:
+            input_path = [process_input_path(path) for path in input_path]
 
         if input_path is not None and output_path is not None:
-            input_path = input_path.expanduser()
             update_needed = check_update(
                 input_path,
                 output_path / (LASTUPDATE_FILENAME.format(
@@ -339,7 +361,6 @@ def generate_singlepage_data(page_blocks, full_data,
             if not update_needed:
                 continue
 
-        data_args = copy.deepcopy(block["args"]["data_args"])
         if data_args.get("input_path", None) is not None:
             data_args["input_path"] = input_path
         if data_args.get("output_path", None) is None:
@@ -384,9 +405,15 @@ def generate_daily_data(
                           **output_args)
 
 
-def generate_site_data(content_pages, project_path=None):
-    full_data = sindri.process.ingest_status_data(n_days=30)
-    input_path_default = sindri.process.get_status_data_paths(n_days=1)[0]
+def generate_site_data(content_pages, project_path=None, mode="test"):
+    if mode == "server":
+        full_data = sindri.process.ingest_status_data_server(n_days=7)
+        input_path_default = sindri.process.get_all_status_data_subpaths(
+            n_days=1)
+    else:
+        full_data = sindri.process.ingest_status_data_client(n_days=30)
+        input_path_default = sindri.process.get_status_data_paths(n_days=1)[0]
+
     if project_path:
         project_path = Path(project_path) / ASSET_PATH
     else:

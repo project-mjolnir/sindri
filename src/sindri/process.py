@@ -14,8 +14,13 @@ import pandas as pd
 import sindri.utils.misc
 
 
-DATA_DIR_DEFAULT = Path.home() / "brokkr" / "hamma" / "telemetry"
-GLOB_PATTERN_DEFAULT = "telemetry_hamma_???_????-??-??.csv"
+DATA_DIR_CLIENT = Path.home() / "brokkr" / "hamma" / "telemetry"
+GLOB_PATTERN_CLIENT = "telemetry_hamma_???_????-??-??.csv"
+
+DATA_DIR_SERVER = Path("/") / "var" / "www" / "hamma.dev" / "public_html"
+GLOB_PATTERN_SUBDIR = "hamma[0-9]*"
+DATA_SUBDIR_SERVER = Path() / "daily"
+GLOB_PATTERN_SERVER = "hamma*_????-??-??.csv"
 
 FIGSIZE_DEFAULT = (8, 24)
 
@@ -64,8 +69,13 @@ CALCULATED_COLUMNS = (
     )
 
 
-def get_status_data_paths(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
-                          glob_pattern=GLOB_PATTERN_DEFAULT):
+def get_status_data_paths(
+        n_days=None,
+        lag=None,
+        data_dir=DATA_DIR_CLIENT,
+        glob_pattern=GLOB_PATTERN_CLIENT,
+        ):
+
     files_to_load = sorted(list(Path(data_dir).glob(glob_pattern)))
     if n_days is not None:
         if lag:
@@ -75,8 +85,33 @@ def get_status_data_paths(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
     return files_to_load
 
 
-def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
-                     glob_pattern=GLOB_PATTERN_DEFAULT):
+def get_status_data_paths_byunit(
+        n_days=None,
+        data_dir=DATA_DIR_SERVER,
+        glob_subdir=GLOB_PATTERN_SUBDIR,
+        data_subdir=DATA_SUBDIR_SERVER,
+        glob_pattern=GLOB_PATTERN_SERVER,
+        **path_kwargs,
+        ):
+    paths_byunit = {}
+    for unit_dir in data_dir.glob(glob_subdir):
+        data_paths = get_status_data_paths(
+            n_days=n_days,
+            data_dir=unit_dir / data_subdir,
+            glob_pattern=glob_pattern,
+            **path_kwargs,
+            )
+        paths_byunit[unit_dir.stem] = data_paths
+    return paths_byunit
+
+
+def get_all_status_data_subpaths(**path_kwargs):
+    paths_byunit = get_status_data_paths_byunit(**path_kwargs)
+    return sorted([path for paths in paths_byunit.values() for path in paths])
+
+
+def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_CLIENT,
+                     glob_pattern=GLOB_PATTERN_CLIENT):
     files_to_load = get_status_data_paths(
         n_days=n_days, lag=lag, data_dir=data_dir, glob_pattern=glob_pattern)
     with warnings.catch_warnings():
@@ -110,16 +145,31 @@ def preprocess_status_data(raw_status_data, decimate=None,
     status_data.set_index("time", drop=False, inplace=True)
     status_data = status_data[status_data.index.notnull()]
 
-    status_data = calculate_columns(
-        status_data, column_specs=column_specs)
+    if column_specs:
+        status_data = calculate_columns(status_data, column_specs=column_specs)
 
     return status_data
 
 
-def ingest_status_data(n_days=None, lag=0, decimate=None):
-    raw_status_data = load_status_data(n_days=n_days, lag=lag)
+def ingest_status_data_client(
+        n_days=None, data_dir=DATA_DIR_CLIENT, lag=0, decimate=None):
+    raw_status_data = load_status_data(
+        n_days=n_days, data_dir=data_dir, lag=lag)
     status_data = preprocess_status_data(raw_status_data, decimate=decimate)
     return status_data
+
+
+def ingest_status_data_server(n_days=None, data_dir=DATA_DIR_SERVER):
+    status_data_units = {}
+    for unit_dir in data_dir.glob(GLOB_PATTERN_SUBDIR):
+        raw_status_data = load_status_data(
+            n_days=n_days,
+            data_dir=unit_dir / DATA_SUBDIR_SERVER,
+            glob_pattern=GLOB_PATTERN_SERVER,
+            )
+        status_data = preprocess_status_data(raw_status_data, column_specs=())
+        status_data_units[unit_dir.stem] = status_data
+    return status_data_units
 
 
 def plot_status_data(
@@ -150,4 +200,4 @@ def plot_status_data(
 
 
 if __name__ == "__main__":
-    plot_status_data(ingest_status_data(n_days=7))
+    plot_status_data(ingest_status_data_client(n_days=7))
