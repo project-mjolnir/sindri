@@ -13,6 +13,7 @@ import time
 import traceback
 
 # Third party imports
+import brokkr.utils.misc
 import numpy as np
 import pandas as pd
 
@@ -50,6 +51,39 @@ DASHBOARD_DATA_ARGS_DEFAULT = {
     "threshold_period": "24H",
     "threshold_type": None,
     }
+
+
+def preprocess_subplot_params(plot, subplot_params, subplot_id=None):
+    plot_params_default = {
+        key: value for key, value in plot["plot_params"].items()
+        if key not in {"subplots"}}
+
+    subplot_params = brokkr.utils.misc.update_dict_recursive(
+        plot_params_default, subplot_params, inplace=False)
+    subplot_params["plot_data"] = {
+        **plot.get("plot_data", {}),
+        **subplot_params.get("plot_data", {}),
+        }
+
+    if subplot_id is not None:
+        subplot_params["subplot_id"] = subplot_id
+    for toplevel_param in {"plot_type", "fast_update"}:
+        subplot_params[toplevel_param] = subplot_params.get(
+            toplevel_param, plot.get(toplevel_param, None))
+
+    for domain_key in {"subplot_column", "subplot_row"}:
+        subplot_params[domain_key] = subplot_params.get(domain_key, 0)
+
+    return subplot_params
+
+
+def preprocess_subplots(plot):
+    plot = copy.deepcopy(plot)
+    subplots = plot["plot_params"].get("subplots", {"default_subplot": {}})
+    subplots = {
+        subplot_id: preprocess_subplot_params(plot, subplot_params, subplot_id)
+        for subplot_id, subplot_params in subplots.items()}
+    return subplots
 
 
 def safe_nan(value):
@@ -176,12 +210,12 @@ def process_tabular_data(
     return output_data
 
 
-def get_dashboard_plot_data(full_data, plot_type, **kwargs):
+def get_dashboard_plot_data(full_data, plot_type, plot_data):
     if not plot_type:
         return None
 
     data_args = copy.deepcopy(DASHBOARD_DATA_ARGS_DEFAULT)
-    data_args.update(**kwargs)
+    data_args.update(**plot_data)
 
     if data_args.get("unit_id", None) is not None:
         try:
@@ -190,7 +224,6 @@ def get_dashboard_plot_data(full_data, plot_type, **kwargs):
             print(f'Unit {data_args["unit_id"]} data not found; skipping')
             return [None] * 3
 
-    plot_data = []
     if plot_type == "numeric":
         if callable(data_args["variable"]):
             base_data = data_args["variable"](full_data)
@@ -217,7 +250,7 @@ def get_dashboard_plot_data(full_data, plot_type, **kwargs):
         base_data = full_data
     else:
         raise ValueError("Plot type must be one of {None, 'numeric'}, not "
-                         + str(plot_type))
+                         + repr(plot_type))
 
     plot_data = tuple(safe_nan(overlay_function(data_function(base_data,
                                                               data_args)))
@@ -231,20 +264,25 @@ def generate_dashboard_data(
         full_data, dashboard_plots, output_path=None):
     dashboard_data = {}
     for plot_id, plot in dashboard_plots.items():
-        if plot["plot_type"]:
+        subplots = preprocess_subplots(plot)
+        plot_data = {}
+        for subplot_id, subplot_params in subplots.items():
+            if not subplot_params["plot_type"]:
+                continue
             try:
-                plot_data = get_dashboard_plot_data(
+                subplot_data = get_dashboard_plot_data(
                     full_data,
-                    plot_type=plot["plot_type"],
-                    **plot["plot_data"],
+                    plot_type=subplot_params["plot_type"],
+                    plot_data=subplot_params["plot_data"],
                     )
             except Exception as error:
                 print("Error generating data for dashboard plot",
-                      plot_id, )
+                      plot_id, subplot_id)
                 print(f"{type(error).__name__}: {error}")
                 traceback.print_exc()
-                plot_data = [None] * 3
-            dashboard_data[plot_id] = plot_data
+                subplot_data = [None] * 3
+            plot_data[subplot_id] = subplot_data
+        dashboard_data[plot_id] = plot_data
 
     if dashboard_data and output_path:
         write_data_json(output_data=dashboard_data, path=output_path)
@@ -464,13 +502,13 @@ def generate_step_strings(color_domain, color_range, endpoints,
     return step_strings
 
 
-def generate_steps(plot, color_map=None):
-    steps = plot["plot_params"].get("steps", None)
+def generate_steps(plot_params, plot_data, color_map=None):
+    steps = plot_params.get("steps", None)
     if steps is False:
         return ""
     if steps is None:
-        steps = lookup_in_map(plot["plot_data"].get("variable", None),
-                              color_map)
+        steps = lookup_in_map(
+            plot_data.get("variable", None), color_map)
     if not steps:
         return ""
     step_strings = generate_step_strings(
@@ -516,22 +554,48 @@ def generate_dashboard_block(
         ):
     widget_blocks = []
     all_plots = []
-    fast_update_plots = []
+    fast_update_plots = {}
     for plot_id, plot in data_args["dashboard_plots"].items():
-        layout_args = lookup_in_map(plot["plot_data"].get("variable", None),
-                                    layout_map)
-        layout_args["tick0"] = layout_args.get(
-            "range", plot["plot_params"].get("range", None))[0]
-        plot["plot_params"]["steps"] = generate_steps(plot, color_map)
-        widget_block = (sindri.website.templates.DASHBOARD_ITEM_TEMPLATE
-                        .format(plot_id=plot_id, **plot["plot_metadata"]))
-        widget_blocks.append(widget_block)
-        plot_setup = (sindri.website.templates.DASHBOARD_PLOT_TEMPLATE
-                      .format(plot_id=plot_id, **plot["plot_params"],
-                              **layout_args))
+        subplots = preprocess_subplots(plot)
+        subplot_setup = []
+        for idx, subplot_params in enumerate(subplots.values()):
+            layout_args = lookup_in_map(
+                subplot_params["plot_data"].get("variable", None), layout_map)
+            layout_args["tick0"] = layout_args.get(
+                "range", subplot_params.get("range", None))[0]
+            subplot_params["steps"] = generate_steps(
+                subplot_params, subplot_params["plot_data"], color_map)
+
+            subplot_setup.append(
+                sindri.website.templates.DASHBOARD_SUBPLOT_TEMPLATE.format(
+                    plot_id=plot_id, **subplot_params, **layout_args))
+
+            if subplot_params["fast_update"]:
+                fast_update_plots[plot_id] = (
+                    fast_update_plots.get(plot_id, []) + [idx])
+
+        plot_grid  = ""
+        if len(subplots) > 1:
+            plot_grid = (
+                sindri.website.templates.DASHBOARD_PLOT_GRID_TEMPLATE.format(
+                    **plot["plot_params"]))
+
+        plot_fgcolor = plot["plot_params"].get(
+            "plot_fgcolor", list(subplots.values())[0].get("plot_fgcolor"))
+        plot_setup = sindri.website.templates.DASHBOARD_PLOT_TEMPLATE.format(
+            plot_id=plot_id,
+            subplot_list="\n".join(subplot_setup),
+            plot_grid=plot_grid,
+            **{**plot["plot_params"], "plot_fgcolor": plot_fgcolor},
+            **layout_args,
+            )
         all_plots.append(plot_setup)
-        if plot.get("fast_update", None):
-            fast_update_plots.append(plot_id)
+
+        widget_block = (
+            sindri.website.templates.DASHBOARD_ITEM_TEMPLATE.format(
+                plot_id=plot_id, **plot["plot_metadata"]))
+        widget_blocks.append(widget_block)
+
     widgets = "\n".join(widget_blocks)
     update_script = sindri.website.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
         section_id=section_id,
@@ -539,15 +603,16 @@ def generate_dashboard_block(
         data_path=data_path,
         lastupdate_path=lastupdate_path,
         update_interval_seconds=update_interval_seconds,
-        fast_update_plots=fast_update_plots,
+        fast_update_plots=json.dumps(fast_update_plots, indent=4),
         update_interval_fast_seconds=update_interval_fast_seconds,
         )
-    dashboard_block = (sindri.website.templates.DASHBOARD_SECTION_TEMPLATE
-                       .format(widgets=widgets,
-                               update_script=update_script,
-                               section_id=section_id,
-                               **block_metadata,
-                               ))
+    dashboard_block = (
+        sindri.website.templates.DASHBOARD_SECTION_TEMPLATE.format(
+            widgets=widgets,
+            update_script=update_script,
+            section_id=section_id,
+            **block_metadata,
+        ))
     return dashboard_block
 
 
