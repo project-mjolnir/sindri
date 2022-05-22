@@ -82,7 +82,7 @@ var allPlots_{section_id} = {{
 Object.keys(allPlots_{section_id}).forEach(function(plotid) {{
     var plotParams = allPlots_{section_id}[plotid];
     var plotData = [];
-    for (i = 0; i < plotParams.subplots.length; i++) {{
+    for (let i = 0; i < plotParams.subplots.length; i++) {{
         plotData.push(plotParams.subplots[i].data);
     }};
     Plotly.newPlot(plotid, plotData, plotParams.layout, plotConfig_{section_id});
@@ -101,7 +101,7 @@ function fastUpdateStatus_{section_id}() {{
     if (lastCheck_{section_id} != null) {{
         Object.keys(fastUpdatePlots_{section_id}).forEach(function(plotid) {{
             var subplotIndicies = fastUpdatePlots_{section_id}[plotid];
-            for (i = 0; i < subplotIndicies.length; i++) {{
+            for (let i = 0; i < subplotIndicies.length; i++) {{
                 updateSubplot(allPlots_{section_id}, null, plotid, subplotIndicies[i]);
             }};
         }});
@@ -118,7 +118,7 @@ xhrUpdate_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
         var statusData = JSON.parse(this.responseText);
         Object.keys(allPlots_{section_id}).forEach(function(plotid) {{
-            for (i = 0; i < allPlots_{section_id}[plotid].subplots.length; i++) {{
+            for (let i = 0; i < allPlots_{section_id}[plotid].subplots.length; i++) {{
                 if (!(fastUpdatePlots_{section_id}.hasOwnProperty(plotid)) || (fastUpdatePlots_{section_id}[plotid].indexOf(i) == -1)) {{
                     updateSubplot(allPlots_{section_id}, statusData, plotid, i);
                 }};
@@ -230,7 +230,7 @@ DASHBOARD_SUBPLOT_TEMPLATE = """
         }},
     }},
     updateFunction: function(allPlots, statusData, plotid, subplotid, subplotidx) {{
-        var data = {{}};
+        let data = {{}};
         {plot_update_code}
         return data;
     }},
@@ -249,7 +249,7 @@ data["gauge.threshold.value"] = statusData[plotid][subplotid][2];
 GAUGE_PLOT_UPDATE_CODE_COLOR = """
 var foundStep = false;
 var allSteps = allPlots[plotid].subplots[subplotidx].data.gauge.steps;
-for (i = 0; i < allSteps.length; i++) {
+for (let i = 0; i < allSteps.length; i++) {
     if (data["value"] >= allSteps[i].range[0] && data["value"] <= allSteps[i].range[1]) {
         data["number.font.color"] = allSteps[i].color;
         foundStep = true;
@@ -423,7 +423,7 @@ xhrUpdate_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
         var outputText = this.responseText;
         outputText = outputText.replace(new RegExp("\\n", "g"), "\\n<br>\\n");
-        for (i = 0; i < replaceItems.length; i++) {{
+        for (let i = 0; i < replaceItems.length; i++) {{
             var regexPattern = new RegExp(replaceItems[i][0], "g");
             outputText = outputText.replace(regexPattern, replaceItems[i][1]);
         }};
@@ -519,7 +519,7 @@ function unpack(data, key) {{
 }};
 
 function createSubplots(plotid, subplotList, data) {{
-    for (i = 0; i < subplotList.length; i++) {{
+    for (let i = 0; i < subplotList.length; i++) {{
         subplotList[i].x = unpack(data, "{x_variable}");
         subplotList[i].y = unpack(data, subplotList[i].name);
     }};
@@ -527,7 +527,7 @@ function createSubplots(plotid, subplotList, data) {{
 }};
 
 function updateSubplots(plotid, subplotList, data) {{
-    for (i = 0; i < subplotList.length; i++) {{
+    for (let i = 0; i < subplotList.length; i++) {{
         var data = {{}}
         data["x"] = unpack(data, "{x_variable}");
         data["y"] = unpack(data, subplotList[i].name);
@@ -647,7 +647,7 @@ function parseQueryParams(query) {{
     }};
     var queryParams = {{}};
     var queryElements = query.split("&");
-    for (var i = 0; i < queryElements.length; i++) {{
+    for (let i = 0; i < queryElements.length; i++) {{
         var queryPair = queryElements[i].split("=");
         var key = decodeURIComponent(queryPair[0]);
         var value = decodeURIComponent(queryPair[1]);
@@ -658,7 +658,7 @@ function parseQueryParams(query) {{
 
 function serializeQueryParams(queryParams) {{
     var queryString = [];
-    for (var param in queryParams) {{
+    for (let param in queryParams) {{
         if (queryParams.hasOwnProperty(param)) {{
             queryString.push(encodeURIComponent(param) + "=" + encodeURIComponent(queryParams[param]));
         }};
