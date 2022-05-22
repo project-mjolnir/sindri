@@ -611,9 +611,12 @@ def generate_dashboard_block(
             )
         all_plots.append(plot_setup)
 
+        keys_to_fill = {"plot_title", "plot_description", "card_url"}
+        plot_metadata = {
+            **{key: "" for key in  keys_to_fill}, **plot["plot_metadata"]}
         widget_block = (
             sindri.website.templates.DASHBOARD_ITEM_TEMPLATE.format(
-                plot_id=plot_id, **plot["plot_metadata"]))
+                plot_id=plot_id, **plot_metadata))
         widget_blocks.append(widget_block)
 
     widgets = "\n".join(widget_blocks)
@@ -789,6 +792,7 @@ def generate_singlepage_content(page_blocks):
         else:
             data_path = block["args"]["data_args"]["output_path"]
         lastupdate_path = LASTUPDATE_FILENAME.format(section_id=section_id)
+
         if block["metadata"].get("button_link", None) is True:
             block["metadata"]["button_link"] = data_path
         if block["metadata"].get("button_newtab", None) is not None:
@@ -796,12 +800,12 @@ def generate_singlepage_content(page_blocks):
                 block["metadata"]["button_newtab"]).lower()
 
         rendered_block = block_function_map[block["type"]](
-                block_metadata=block["metadata"],
-                section_id=section_id,
-                data_path=data_path,
-                lastupdate_path=lastupdate_path,
-                **block["args"],
-                )
+            block_metadata=block["metadata"],
+            section_id=section_id,
+            data_path=data_path,
+            lastupdate_path=lastupdate_path,
+            **block["args"],
+            )
         rendered_blocks.append(rendered_block)
     page_content = (sindri.website.templates.SINGLEPAGE_TEMPLATE
                     .format(content_blocks="\n".join(rendered_blocks)))

@@ -36,6 +36,8 @@ description: {section_description}
 ----
 nav_label: {section_nav_label}
 ----
+link_whole_card: true
+----
 widgets:
 
 {widgets}
@@ -52,6 +54,8 @@ DASHBOARD_ITEM_TEMPLATE = """
 title: {plot_title}
 -----
 description: {plot_description}
+-----
+url: {card_url}
 -----
 content:
 
