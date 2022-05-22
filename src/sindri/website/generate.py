@@ -34,10 +34,12 @@ LEKTOR_ICON_VERSION_PATH = THEME_PATH / "lektor-icon" / "_version.txt"
 LASTUPDATE_FILENAME = "{section_id}_lastupdate.json"
 DATA_FILENAME = "{section_id}_data.{extension}"
 DEFAULT_EXTENSION = "json"
+DEFAULT_SUB_NAME = "DEFAULT"
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
 STATUS_UPDATE_INTERVAL_SLOW_SECONDS = 300
+
 DASHBOARD_DATA_ARGS_DEFAULT = {
     "data_functions": [
         lambda base_data, data_args: base_data.iloc[-1],
@@ -79,7 +81,7 @@ def preprocess_subplot_params(plot, subplot_params, subplot_id=None):
 
 def preprocess_subplots(plot):
     plot = copy.deepcopy(plot)
-    subplots = plot["plot_params"].get("subplots", {"default_subplot": {}})
+    subplots = plot["plot_params"].get("subplots", {DEFAULT_SUB_NAME: {}})
     subplots = {
         subplot_id: preprocess_subplot_params(plot, subplot_params, subplot_id)
         for subplot_id, subplot_params in subplots.items()}
@@ -120,8 +122,13 @@ def write_data_json(output_data, path, by_line=False):
                   separators=separators, cls=CustomJSONEncoder)
 
 
-def write_lastupdate_json(path=None, lastupdate=None,
-                          lastupdate_data=None, extra_data=None):
+def write_lastupdate_json(
+        path=None,
+        lastupdate=None,
+        lastupdate_source=None,
+        lastupdate_sources=None,
+        extra_data=None,
+        ):
     if extra_data:
         output_data = extra_data
     else:
@@ -132,8 +139,11 @@ def write_lastupdate_json(path=None, lastupdate=None,
         output_data["lastUpdate"] = int(time.time() * 1000)
     else:
         output_data["lastUpdate"] = lastupdate
-    if lastupdate_data is not None:
-        output_data["lastUpdateData"] = int(lastupdate_data)
+
+    if lastupdate_source is not None:
+        output_data["lastUpdateSource"] = lastupdate_source
+    if lastupdate_sources is not None:
+        output_data["lastUpdateSources"] = lastupdate_sources
 
     if path:
         write_data_json(output_data=output_data, path=path)
@@ -142,21 +152,28 @@ def write_lastupdate_json(path=None, lastupdate=None,
 
 def check_update(input_path, lastupdate_path):
     if isinstance(input_path, (str, os.PathLike)):
-        input_path = [input_path]
-    current_lastupdate_times = [
-        Path(path).stat().st_mtime_ns for path in input_path]
-    current_lastupdate = max(current_lastupdate_times) // 1000000
+        input_path = {DEFAULT_SUB_NAME: input_path}
+    current_lastupdate_times = {
+        key: Path(path).stat().st_mtime_ns // 1000000
+        for key, path in input_path.items()}
+    current_lastupdate = max(current_lastupdate_times.values())
     if Path(lastupdate_path).exists():
         with open(lastupdate_path, "r",
                   encoding="utf-8", newline="\n") as oldfile:
             old_lastupdate = json.load(oldfile)
-        if old_lastupdate["lastUpdateData"] == current_lastupdate:
+        if old_lastupdate["lastUpdateSource"] == current_lastupdate:
             write_lastupdate_json(
-                lastupdate_path, lastupdate=old_lastupdate["lastUpdate"],
-                lastupdate_data=current_lastupdate)
+                lastupdate_path,
+                lastupdate=old_lastupdate["lastUpdate"],
+                lastupdate_source=current_lastupdate,
+                lastupdate_sources=current_lastupdate_times,
+                )
             return False
     write_lastupdate_json(
-        path=lastupdate_path, lastupdate_data=current_lastupdate)
+        path=lastupdate_path,
+        lastupdate_source=current_lastupdate,
+        lastupdate_sources=current_lastupdate_times,
+        )
     return True
 
 
@@ -388,7 +405,9 @@ def generate_singlepage_data(
         if isinstance(input_path, (str, os.PathLike)):
             input_path = process_input_path(input_path)
         elif input_path:
-            input_path = [process_input_path(path) for path in input_path]
+            input_path = {
+                key: process_input_path(path)
+                for key, path in input_path.items()}
 
         if input_path is not None and output_path is not None:
             update_needed = check_update(
@@ -446,8 +465,9 @@ def generate_daily_data(
 def generate_site_data(content_pages, project_path=None, mode="test"):
     if mode == "server":
         full_data = sindri.process.ingest_status_data_server(n_days=7)
-        input_path_default = sindri.process.get_all_status_data_subpaths(
-            n_days=1)
+        input_paths = sindri.process.get_status_data_paths_bykey(n_days=1)
+        input_path_default = {
+            key: paths[0] for key, paths in input_paths.items()}
     else:
         full_data = sindri.process.ingest_status_data_client(n_days=30)
         input_path_default = sindri.process.get_status_data_paths(n_days=1)[0]

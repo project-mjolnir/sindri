@@ -72,6 +72,7 @@ var plotConfig_{section_id} = {{
 
 var lastCheck_{section_id} = null;
 var lastUpdate_{section_id} = null;
+var lastUpdateSources_{section_id} = {{}};
 var maxLatency_{section_id} = 0;
 
 var allPlots_{section_id} = {{
@@ -138,6 +139,7 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
             var currentUpdate = new Date(lastUpdateData.lastUpdate);
             if (lastUpdate_{section_id} == null || lastUpdate_{section_id}.getTime() != currentUpdate.getTime()) {{
                 lastUpdate_{section_id} = currentUpdate;
+                lastUpdateSources_{section_id} = lastUpdateData.lastUpdateSources;
                 xhrUpdate_{section_id}.open("GET", "{data_path}", true);
                 xhrUpdate_{section_id}.send();
             }};

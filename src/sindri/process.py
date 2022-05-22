@@ -85,7 +85,7 @@ def get_status_data_paths(
     return files_to_load
 
 
-def get_status_data_paths_byunit(
+def get_status_data_paths_bykey(
         n_days=None,
         data_dir=DATA_DIR_SERVER,
         glob_subdir=GLOB_PATTERN_SUBDIR,
@@ -106,8 +106,8 @@ def get_status_data_paths_byunit(
 
 
 def get_all_status_data_subpaths(**path_kwargs):
-    paths_byunit = get_status_data_paths_byunit(**path_kwargs)
-    return sorted([path for paths in paths_byunit.values() for path in paths])
+    paths_bykey = get_status_data_paths_bykey(**path_kwargs)
+    return sorted([path for paths in paths_bykey.values() for path in paths])
 
 
 def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_CLIENT,
