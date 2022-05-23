@@ -3,6 +3,7 @@ Code to generate, build and deploy the Mjolnir status website.
 """
 
 # Standard library imports
+import configparser
 import os
 from pathlib import Path
 import shutil
@@ -20,6 +21,8 @@ LEKTOR_SOURCE_DIR = "mjolnir-website"
 LEKTOR_SOURCE_PATH = Path(__file__).parent / LEKTOR_SOURCE_DIR
 LEKTOR_PROJECT_PATH = (
     sindri.utils.misc.get_cache_dir() / "main" / LEKTOR_SOURCE_DIR)
+LEKTOR_PROJECT_FILENAME = "mjolnir-website.lektorproject"
+LEKTOR_DEFAULT_SERVER_NAME = "mjolnir"
 
 SOURCE_IGNORE_PATTERNS = (
     "temp", "*.tmp", "*.temp", "*.bak", "*.log", "*.orig", "example-site")
@@ -34,6 +37,30 @@ def get_website_cache_dir(cache_dir=None):
         return Path() / "Sindri_Website_Source_Cache" / LEKTOR_SOURCE_DIR
     else:
         return Path(cache_dir)
+
+
+def render_lektorproject(
+        project_name=None, project_path=LEKTOR_PROJECT_PATH):
+    if project_name is None:
+        project_filename = LEKTOR_PROJECT_FILENAME
+    else:
+        project_filename = f"{project_name}.lektorproject"
+
+    project_config = configparser.ConfigParser()
+    project_config.read(project_path / project_filename, encoding="UTF-8")
+    project_config.read(
+        sindri.config.website.WEBSITE_CONFIG_PATH / project_filename,
+        encoding="UTF-8")
+
+    server_section = f"servers.{LEKTOR_DEFAULT_SERVER_NAME}"
+    if (project_config.has_section(server_section)
+            and not project_config.has_option(server_section, "target")
+            and sindri.config.website.OUTPUT_TARGET_CLIENT
+            ):
+        project_config[server_section]["target"] = (
+            sindri.config.website.OUTPUT_TARGET_CLIENT)
+
+    return project_config
 
 
 def update_data(project_path=LEKTOR_PROJECT_PATH, mode="test"):
@@ -64,6 +91,12 @@ def rebuild_project(
         pass
     shutil.copytree(source_path, output_path,
                     ignore=shutil.ignore_patterns(*SOURCE_IGNORE_PATTERNS))
+
+    lektorproject_config = render_lektorproject(project_path=output_path)
+    with open(output_path / LEKTOR_PROJECT_FILENAME, "w",
+              encoding="utf-8", newline="\n") as lektorproject_file:
+        lektorproject_config.write(lektorproject_file)
+
     update_project(project_path=output_path, mode=mode)
 
 

@@ -13,18 +13,18 @@ import brokkr.utils.misc
 
 # Module-level constants needed to find and load website config
 
-DASHBOARDS_SUBDIR = "website"
+WEBSITE_CONFIG_SUBDIR = "website"
 DEFAULT_DASHBOARD = "main"
 DASHBOARD_SUFFIX = ".py"
 CONTENT_VAR_NAME = "CONTENT_PAGES"
 MODE_VAR_NAME = "MODE"
 
 SYSTEM_PATH = brokkr.utils.misc.get_system_path(SYSTEMPATH_CONFIG)
-DASHBOARDS_PATH = SYSTEM_PATH / DASHBOARDS_SUBDIR
+WEBSITE_CONFIG_PATH = SYSTEM_PATH / WEBSITE_CONFIG_SUBDIR
 
 
-def load_dashboard_config(
-        dashboard=None, dashboard_dir=DASHBOARDS_PATH, mode=None):
+def load_website_config(
+        dashboard=None, dashboard_dir=WEBSITE_CONFIG_PATH, mode=None):
     # Set up path to selected dashboard
     dashboard = dashboard or DEFAULT_DASHBOARD
     dashboard_path = Path(dashboard_dir) / dashboard
@@ -43,7 +43,7 @@ def load_dashboard_config(
     return dashboard_config
 
 
-_website_config = load_dashboard_config()
+_website_config = load_website_config()
 
 
 # Config settings loaded from website config
@@ -57,6 +57,7 @@ DATA_SUBDIR_SERVER = _website_config["DATA_SUBDIR_SERVER"]
 GLOB_PATTERN_SERVER = _website_config["GLOB_PATTERN_SERVER"]
 
 OUTPUT_DIR_SERVER = _website_config["OUTPUT_DIR_SERVER"]
+OUTPUT_TARGET_CLIENT = _website_config.get("OUTPUT_TARGET_CLIENT", None)
 
 
 DATETIME_COLNAME = _website_config.get("DATETIME_COLNAME", "time")

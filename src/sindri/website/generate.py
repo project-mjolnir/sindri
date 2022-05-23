@@ -1,5 +1,5 @@
 """
-Data, plots and calculations for the HAMMA Mjolnir status website.
+Data, plots and calculations for the Mjolnir status website.
 """
 
 # Standard library imports
@@ -829,7 +829,7 @@ def generate_build_info(project_path=None, output_path=BUILDINFO_DATABAG_PATH):
             pkg_name=pkg_name.replace("-", "&#8209;"),
             pkg_version=pkg_version, pkg_link=pkg_link)
         for pkg_name, pkg_version, pkg_link in (
-            ("Sindri", sindri_version, "https://github.com/hamma-dev/sindri"),
+            ("Sindri", sindri_version, "https://github.com/project-mjolnir/sindri"),
             ("Lektor", lektor_version, "https://www.getlektor.com/"),
             ("Lektor-Icon", lektor_icon_version,
              "https://spyder-ide.github.io/lektor-icon/"),

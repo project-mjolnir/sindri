@@ -1,22 +1,13 @@
 [project]
-name = HAMMA Mjolnir Status Dashboard
+name = Mjolnir Status Dashboard
 themes = lektor-icon
 url_style = relative
 included_assets = .nojekyll
 
-[servers.hammadev]
-name = HAMMA.dev VPS
-enabled = yes
-default = yes
-target = rsync://pi@hamma.dev/var/www/hamma.dev/public_html/hamma1
-
 [theme_settings]
-title = HAMMA Mjolnir Status Dashboard
-content_lang = en-US
-author = UAH HAMMA Group
-copyright = &copy; 2019 UAH HAMMA Group
-description = The status display interface for the Mjolnir system of networked HAMMA lightning sensors.
-keywords = lightning, science, iot, status, dashboard
+title = Mjolnir Status Dashboard
+description = The status display interface for the Mjolnir system.
+keywords = science, iot, status, dashboard, brokkr, sindri, mjolnir, python
 favicon_path = /static/images/favicon.png
 theme_fg_color = #ffffff
 theme_fg_alt_color = #eeeeee
