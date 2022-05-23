@@ -1,9 +1,8 @@
 """
-Code to generate, build and deploy the HAMMA Mjolnir status website.
+Code to generate, build and deploy the Mjolnir status website.
 """
 
 # Standard library imports
-import functools
 import os
 from pathlib import Path
 import shutil
@@ -21,16 +20,9 @@ LEKTOR_SOURCE_DIR = "mjolnir-website"
 LEKTOR_SOURCE_PATH = Path(__file__).parent / LEKTOR_SOURCE_DIR
 LEKTOR_PROJECT_PATH = (
     sindri.utils.misc.get_cache_dir() / "main" / LEKTOR_SOURCE_DIR)
-LEKTOR_DEST_PATH_DEFAULT = Path("_sindri_deploy")
 
 SOURCE_IGNORE_PATTERNS = (
     "temp", "*.tmp", "*.temp", "*.bak", "*.log", "*.orig", "example-site")
-
-
-@functools.lru_cache
-def get_content_config(dashboard=None, mode=None):
-    return sindri.config.website.load_dashboard_content_config(
-        dashboard=dashboard, mode=mode)
 
 
 def get_website_cache_dir(cache_dir=None):
@@ -44,18 +36,20 @@ def get_website_cache_dir(cache_dir=None):
         return Path(cache_dir)
 
 
-def update_data(project_path=LEKTOR_PROJECT_PATH, mode=None):
+def update_data(project_path=LEKTOR_PROJECT_PATH, mode="test"):
     sindri.website.generate.generate_site_data(
-        content_pages=get_content_config(mode=mode),
+        content_pages=sindri.config.website.get_content_config(mode=mode),
         project_path=project_path,
         mode=mode,
         )
 
 
-def update_project(project_path=LEKTOR_PROJECT_PATH, mode=None):
+def update_project(project_path=LEKTOR_PROJECT_PATH, mode="test"):
     update_data(project_path=project_path, mode=mode)
     sindri.website.generate.generate_and_write_site_content(
-        content_pages=get_content_config(mode=mode), project_path=project_path)
+        content_pages=sindri.config.website.get_content_config(mode=mode),
+        project_path=project_path,
+        )
 
 
 def rebuild_project(
@@ -91,7 +85,7 @@ def run_lektor(command, args=(), project_path=LEKTOR_PROJECT_PATH, verbose=1):
 
 def build_deploy_lektor(mode, cache_dir, dest_dir=None, verbose=0):
     if mode == "server" and dest_dir is None:
-        dest_dir = LEKTOR_DEST_PATH_DEFAULT
+        dest_dir = sindri.config.website.OUTPUT_DIR_SERVER
     run_lektor(command="build", project_path=cache_dir, verbose=verbose + 1)
     if dest_dir:
         build_dir_output = run_lektor(

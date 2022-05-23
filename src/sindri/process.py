@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Basic processing code for HAMMA Mjolnir data.
+Data ingest and processing code for Mjolnir (and other) data.
 """
 
 # Standard library imports
@@ -11,62 +11,20 @@ from pathlib import Path
 import pandas as pd
 
 # Local imports
-import sindri.utils.misc
+from sindri.config.website import (
+    CALCULATED_COLUMNS,
+    DATA_DIR_CLIENT,
+    DATA_DIR_SERVER,
+    DATA_SUBDIR_SERVER,
+    DATETIME_COLNAME,
+    DATETIME_FORMAT,
+    GLOB_PATTERN_CLIENT,
+    GLOB_PATTERN_SERVER,
+    GLOB_PATTERN_SUBDIR,
+    )
 
-
-DATA_DIR_CLIENT = Path.home() / "brokkr" / "hamma" / "telemetry"
-GLOB_PATTERN_CLIENT = "telemetry_hamma_???_????-??-??.csv"
-
-DATA_DIR_SERVER = Path("/") / "var" / "www" / "hamma.dev" / "public_html"
-GLOB_PATTERN_SUBDIR = "hamma[0-9]*"
-DATA_SUBDIR_SERVER = Path() / "daily"
-GLOB_PATTERN_SERVER = "hamma*_????-??-??.csv"
 
 FIGSIZE_DEFAULT = (8, 24)
-
-POWER_IDLE_W = 2.8
-
-CALCULATED_COLUMNS = (
-    ("power_load", "power_out",
-     lambda full_data: full_data["adc_vl_f"] * full_data["adc_il_f"]),
-    ("power_net", "power_load",
-     lambda full_data:
-         (full_data["power_out"] - full_data["power_load"] - POWER_IDLE_W)),
-    ("ahnet_daily", "ahl_daily",
-     lambda full_data:
-         (full_data["ahc_daily"] - full_data["ahl_daily"])),
-    ("sensor_uptime", "vb_max",
-     lambda full_data: full_data["sequence_count"] / (60 * 60)),
-    ("crc_errors_delta", "crc_errors",
-     lambda full_data: full_data["crc_errors"].diff(1).clip(lower=0)),
-    ("crc_errors_hourly", "crc_errors_delta",
-     lambda full_data:
-         full_data["crc_errors_delta"].rolling(60, min_periods=2).sum()
-         / (round(full_data["time"].diff(60).dt.total_seconds()) / (60 * 60))),
-    ("crc_errors_daily", "crc_errors_hourly",
-     lambda full_data:
-         full_data["crc_errors_delta"].rolling(60 * 24, min_periods=2).sum()
-         / (round(full_data["time"].diff(60 * 24).dt.total_seconds())
-            / (60 * 60 * 24))),
-    ("trigger_delta", "valid_packets",
-     (lambda full_data: round(
-         -1e3 * full_data["bytes_remaining"].diff(1)
-         / sindri.utils.misc.TRIGGER_SIZE_MB).clip(lower=0))),
-    ("trigger_rate_1min", "trigger_delta",
-     lambda full_data: full_data["trigger_delta"]
-     / (round(full_data["time"].diff(1).dt.total_seconds()) / 60)),
-    ("trigger_rate_5min", "trigger_rate_1min",
-     lambda full_data:
-     full_data["trigger_delta"].rolling(5, min_periods=2).mean()
-     / (round(full_data["time"].diff(5).dt.total_seconds()) / (60 * 5))),
-    ("trigger_rate_1hr", "trigger_rate_5min",
-     lambda full_data:
-     full_data["trigger_delta"].rolling(60, min_periods=6).mean()
-     / (round(full_data["time"].diff(60).dt.total_seconds()) / (60 * 60))),
-    ("triggers_remaining", "bytes_remaining",
-     lambda full_data: round(full_data["bytes_remaining"] * 1e3
-                             / sindri.utils.misc.TRIGGER_SIZE_MB)),
-    )
 
 
 def get_status_data_paths(
@@ -134,16 +92,17 @@ def calculate_columns(df, column_specs=CALCULATED_COLUMNS):
     return df
 
 
-def preprocess_status_data(raw_status_data, decimate=None,
-                           column_specs=CALCULATED_COLUMNS):
+def preprocess_status_data(
+        raw_status_data, decimate=None, column_specs=CALCULATED_COLUMNS):
     if decimate:
         status_data = raw_status_data.iloc[::decimate, :]
     else:
         status_data = raw_status_data
-    status_data["time"] = pd.to_datetime(
-        status_data["time"],
-        format="%Y-%m-%d %H:%M:%S.%f").dt.tz_localize(None)
-    status_data.set_index("time", drop=False, inplace=True)
+    status_data[DATETIME_COLNAME] = pd.to_datetime(
+        status_data[DATETIME_COLNAME],
+        format=DATETIME_FORMAT,
+        ).dt.tz_localize(None)
+    status_data.set_index(DATETIME_COLNAME, drop=False, inplace=True)
     status_data = status_data[status_data.index.notnull()]
 
     if column_specs:

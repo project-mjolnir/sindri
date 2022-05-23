@@ -3,12 +3,15 @@ Load the configuration for the plots and tables on the generated website.
 """
 
 # Standard library imports
+import copy
 from pathlib import Path
 
 # Third party imports
 from brokkr.config.systempath import SYSTEMPATH_CONFIG
 import brokkr.utils.misc
 
+
+# Module-level constants needed to find and load website config
 
 DASHBOARDS_SUBDIR = "website"
 DEFAULT_DASHBOARD = "main"
@@ -20,7 +23,7 @@ SYSTEM_PATH = brokkr.utils.misc.get_system_path(SYSTEMPATH_CONFIG)
 DASHBOARDS_PATH = SYSTEM_PATH / DASHBOARDS_SUBDIR
 
 
-def load_dashboard_full_config(
+def load_dashboard_config(
         dashboard=None, dashboard_dir=DASHBOARDS_PATH, mode=None):
     # Set up path to selected dashboard
     dashboard = dashboard or DEFAULT_DASHBOARD
@@ -29,17 +32,46 @@ def load_dashboard_full_config(
         dashboard_path = dashboard_path.with_suffix(DASHBOARD_SUFFIX)
 
     # Set up namespace
-    dashboard_config_namespace = {}
+    dashboard_config = {}
     if mode is not None:
-        dashboard_config_namespace[MODE_VAR_NAME] = mode
+        dashboard_config[MODE_VAR_NAME] = mode
 
     # Load dashboard configuration
-    with open(dashboard_path, encoding="UTF-8") as dashboard_config:
-        exec(dashboard_config.read(), dashboard_config_namespace)
+    with open(dashboard_path, encoding="UTF-8") as dashboard_config_file:
+        exec(dashboard_config_file.read(), dashboard_config)
 
-    return dashboard_config_namespace
+    return dashboard_config
 
 
-def load_dashboard_content_config(**load_kwargs):
-    full_config = load_dashboard_full_config(**load_kwargs)
-    return full_config[CONTENT_VAR_NAME]
+_website_config = load_dashboard_config()
+
+
+# Config settings loaded from website config
+
+DATA_DIR_CLIENT = _website_config["DATA_DIR_CLIENT"]
+GLOB_PATTERN_CLIENT = _website_config["GLOB_PATTERN_CLIENT"]
+
+DATA_DIR_SERVER = _website_config["DATA_DIR_SERVER"]
+GLOB_PATTERN_SUBDIR = _website_config["GLOB_PATTERN_SUBDIR"]
+DATA_SUBDIR_SERVER = _website_config["DATA_SUBDIR_SERVER"]
+GLOB_PATTERN_SERVER = _website_config["GLOB_PATTERN_SERVER"]
+
+OUTPUT_DIR_SERVER = _website_config["OUTPUT_DIR_SERVER"]
+
+
+DATETIME_COLNAME = _website_config.get("DATETIME_COLNAME", "time")
+DATETIME_FORMAT = _website_config.get(
+    "DATETIME_FORMAT", "%Y-%m-%d %H:%M:%S.%f")
+
+CALCULATED_COLUMNS = _website_config.get("CALCULATED_COLUMNS", ())
+
+
+CONTENT_PAGES_CLIENT = copy.deepcopy(_website_config["CONTENT_PAGES_CLIENT"])
+CONTENT_PAGES_SERVER = copy.deepcopy(_website_config["CONTENT_PAGES_SERVER"])
+
+
+def get_content_config(mode):
+    if mode in {"test", "client"}:
+        return copy.deepcopy(CONTENT_PAGES_CLIENT)
+    else:
+        return copy.deepcopy(CONTENT_PAGES_SERVER)

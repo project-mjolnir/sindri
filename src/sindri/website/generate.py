@@ -13,12 +13,12 @@ import time
 import traceback
 
 # Third party imports
-import brokkr.utils.misc
 import numpy as np
 import pandas as pd
 
 # Local imports
 import sindri.process
+import sindri.website.preprocess
 import sindri.website.templates
 
 
@@ -34,7 +34,6 @@ LEKTOR_ICON_VERSION_PATH = THEME_PATH / "lektor-icon" / "_version.txt"
 LASTUPDATE_FILENAME = "{section_id}_lastupdate.json"
 DATA_FILENAME = "{section_id}_data.{extension}"
 DEFAULT_EXTENSION = "json"
-DEFAULT_SUB_NAME = "DEFAULT"
 
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
@@ -53,44 +52,6 @@ DASHBOARD_DATA_ARGS_DEFAULT = {
     "threshold_period": "24H",
     "threshold_type": None,
     }
-
-
-def preprocess_subplot_params(plot, subplot_params, subplot_id=None):
-    plot_params_default = {
-        key: value for key, value in plot["plot_params"].items()
-        if key not in {"subplots"}}
-
-    subplot_params = brokkr.utils.misc.update_dict_recursive(
-        plot_params_default, subplot_params, inplace=False)
-    subplot_params["plot_data"] = {
-        **plot.get("plot_data", {}),
-        **subplot_params.get("plot_data", {}),
-        }
-
-    if subplot_id is not None:
-        subplot_params["subplot_id"] = subplot_id
-    for toplevel_param in {"plot_type", "fast_update"}:
-        subplot_params[toplevel_param] = subplot_params.get(
-            toplevel_param, plot.get(toplevel_param, None))
-
-    defaults = {
-        "subplot_title": "",
-        "subplot_column": 0,
-        "subplot_row": 0,
-        "subplot_titlesize": 20,
-        }
-    subplot_params = {**defaults, **subplot_params}
-
-    return subplot_params
-
-
-def preprocess_subplots(plot):
-    plot = copy.deepcopy(plot)
-    subplots = plot["plot_params"].get("subplots", {DEFAULT_SUB_NAME: {}})
-    subplots = {
-        subplot_id: preprocess_subplot_params(plot, subplot_params, subplot_id)
-        for subplot_id, subplot_params in subplots.items()}
-    return subplots
 
 
 def safe_nan(value):
@@ -157,7 +118,8 @@ def write_lastupdate_json(
 
 def check_update(input_path, lastupdate_path):
     if isinstance(input_path, (str, os.PathLike)):
-        input_path = {DEFAULT_SUB_NAME: input_path}
+        input_path = {
+            sindri.website.preprocess.DEFAULT_SUBPLOT_NAME: input_path}
     current_lastupdate_times = {
         key: Path(path).stat().st_mtime_ns // 1000000
         for key, path in input_path.items()}
@@ -286,7 +248,7 @@ def generate_dashboard_data(
         full_data, dashboard_plots, output_path=None):
     dashboard_data = {}
     for plot_id, plot in dashboard_plots.items():
-        subplots = preprocess_subplots(plot)
+        subplots = sindri.website.preprocess.preprocess_subplots(plot)
         plot_data = {}
         for subplot_id, subplot_params in subplots.items():
             if not subplot_params["plot_type"]:
@@ -581,7 +543,7 @@ def generate_dashboard_block(
     all_plots = []
     fast_update_plots = {}
     for plot_id, plot in data_args["dashboard_plots"].items():
-        subplots = preprocess_subplots(plot)
+        subplots = sindri.website.preprocess.preprocess_subplots(plot)
         subplot_setup = []
         for idx, subplot_params in enumerate(subplots.values()):
             layout_args = lookup_in_map(
