@@ -197,11 +197,14 @@ DASHBOARD_SUBPLOT_TEMPLATE = """
 {{
     subplotid: "{subplot_id}",
     data: {{
-        domain: {{ x: [0, 1], y: [0, 1] }},
         value: {gauge_value},
         type: "indicator",
-        mode: "{plot_mode}",
+        title: {{
+            text: "{subplot_title}",
+            font: {{ color: "{plot_fgcolor}", size: {subplot_titlesize} }},
+        }},
         domain: {{ column: {subplot_column}, row: {subplot_row} }},
+        mode: "{plot_mode}",
         delta: {{
             decreasing: {{ color: "{decreasing_color}" }},
             increasing: {{ color: "{increasing_color}" }},

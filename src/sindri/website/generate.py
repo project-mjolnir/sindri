@@ -73,8 +73,13 @@ def preprocess_subplot_params(plot, subplot_params, subplot_id=None):
         subplot_params[toplevel_param] = subplot_params.get(
             toplevel_param, plot.get(toplevel_param, None))
 
-    for domain_key in {"subplot_column", "subplot_row"}:
-        subplot_params[domain_key] = subplot_params.get(domain_key, 0)
+    defaults = {
+        "subplot_title": "",
+        "subplot_column": 0,
+        "subplot_row": 0,
+        "subplot_titlesize": 20,
+        }
+    subplot_params = {**defaults, **subplot_params}
 
     return subplot_params
 
