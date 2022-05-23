@@ -101,7 +101,8 @@ def get_status_data_paths_bykey(
             glob_pattern=glob_pattern,
             **path_kwargs,
             )
-        paths_byunit[unit_dir.stem] = data_paths
+        if data_paths:
+            paths_byunit[unit_dir.stem] = data_paths
     return paths_byunit
 
 
@@ -162,12 +163,19 @@ def ingest_status_data_client(
 def ingest_status_data_server(n_days=None, data_dir=DATA_DIR_SERVER):
     status_data_units = {}
     for unit_dir in data_dir.glob(GLOB_PATTERN_SUBDIR):
-        raw_status_data = load_status_data(
-            n_days=n_days,
-            data_dir=unit_dir / DATA_SUBDIR_SERVER,
-            glob_pattern=GLOB_PATTERN_SERVER,
-            )
-        status_data = preprocess_status_data(raw_status_data, column_specs=())
+        try:
+            raw_status_data = load_status_data(
+                n_days=n_days,
+                data_dir=unit_dir / DATA_SUBDIR_SERVER,
+                glob_pattern=GLOB_PATTERN_SERVER,
+                )
+            status_data = preprocess_status_data(
+                raw_status_data, column_specs=())
+        except Exception as error:
+            print(f"Error loading status data at {unit_dir.as_posix()!r}")
+            print(f"{type(error).__name__}: {error}")
+            continue
+
         status_data_units[unit_dir.stem] = status_data
     return status_data_units
 
