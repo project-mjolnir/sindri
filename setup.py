@@ -75,7 +75,7 @@ setuptools.setup(
         "MarkupSafe>=1,<2",
         "numpy>=1,<2",
         "pandas>=1,<2",
-        "serviceinstaller>=0.1.4; sys_platform == 'linux'",
+        "serviceinstaller>=0.2.0; sys_platform == 'linux'",
         ],
     entry_points={
         "console_scripts": [

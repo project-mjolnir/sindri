@@ -26,14 +26,23 @@ def log_setup(verbose=None):
 
 
 def install_sindri_service(
-        platform=None, mode="client", extra_args="", verbose=None):
+        mode="client",
+        account=None,
+        extra_args="",
+        verbose=None,
+        **serviceinstaller_args,
+        ):
     log_setup(verbose)
 
     service_config = copy.deepcopy(sindri.config.service.SERVICE_CONFIG[mode])
+    settings = service_config["service_settings"]["Service"]
+
     if extra_args:
-        settings = service_config["service_settings"]["Service"]
         settings["ExecStart"] = settings["ExecStart"] + " " + extra_args
-    serviceinstaller.install_service(platform=platform, **service_config)
+    if account:
+        settings["User"] = account
+
+    serviceinstaller.install_service(**service_config, **serviceinstaller_args)
 
 
 if __name__ == "__main__":

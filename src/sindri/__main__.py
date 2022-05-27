@@ -68,10 +68,19 @@ def generate_argparser_main():
         "install-service", help="Install Sindri as a systemd service (Linux)",
         argument_default=argparse.SUPPRESS)
     parser_install_service.add_argument(
+        "--account",
+        help="User account to run the service under, if not the current")
+    parser_install_service.add_argument(
+        "--output-path",
+        help="Path to write the service file, if not the platform default")
+    parser_install_service.add_argument(
+        "--skip-enable", action="store_true",
+        help="Skip enabling/disabling services, just write service file")
+    parser_install_service.add_argument(
         "--platform", choices=("linux", ),
         help="Manually override automatic platform detection")
     parser_install_service.add_argument(
-        "--extra-args", help="Extra args ")
+        "--extra-args", help="Extra args to pass when starting service")
     parsers_add_mode_arg.append(parser_install_service)
     parsers_add_verbose_arg.append(parser_install_service)
 
