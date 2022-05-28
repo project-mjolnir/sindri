@@ -5,9 +5,12 @@ Main-level command handling routine for running Sindri on the command line.
 
 # Standard library imports
 import argparse
+import os
 
 
-MODE_NAMES = ("test", "client", "server")
+SYSTEM_PARAM = "system"
+SYSTEM_PATH_PARAM = "system_path"
+MODE_NAMES = {"test", "client", "server"}
 
 
 def generate_argparser_main():
@@ -17,6 +20,15 @@ def generate_argparser_main():
     parser_main.add_argument(
         "--version", action="store_true",
         help="If passed, will print the version and exit")
+    parser_main.add_argument(
+        "--system", dest=SYSTEM_PARAM,
+        help=("Use the system path registered in the systempath.toml file "
+              "that matches the passed system name, overriding the default."))
+    parser_main.add_argument(
+        "--system-path", dest=SYSTEM_PATH_PARAM,
+        help=("Sets the directory to use to load system config data. "
+              "Overrides the settings in the config, env var and --system."))
+
     subparsers = parser_main.add_subparsers(
         title="Subcommands", help="Subcommand to execute",
         metavar="Subcommand", dest="subcommand_name")
@@ -123,9 +135,16 @@ def main():
     except Exception:  # Ignore any problem deleting the arg
         pass
 
+    for param in [SYSTEM_PARAM, SYSTEM_PATH_PARAM]:
+        if getattr(parsed_args, param, None):
+            os.environ[f"BROKKR_{param.upper()}"] = getattr(parsed_args, param)
+            delattr(parsed_args, param)
+
     if getattr(parsed_args, "version", None) or subcommand == "version":
         import sindri
-        print("Sindri version " + str(sindri.__version__))
+        print("Sindri version", sindri.__version__)
+        import brokkr.start
+        print(brokkr.start.generate_version_message().split(",")[-1].strip())
     elif subcommand == "help":
         parser_main.print_help()
     elif subcommand == "start":
