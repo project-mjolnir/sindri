@@ -5,15 +5,26 @@ Configuration to run Sindri as a service for supported platforms (Linux).
 # Standard library imports
 import sys
 
+# Third party imports
+from brokkr.utils.services import (
+    SERVICE_NAME_TEMPLATE,
+    SYSTEM_FULLNAME,
+    SYSTEM_NAME,
+    SYSTEM_PARAMETER,
+    )
+
 # Local imports
 import sindri.utils.misc
 
-USER_HOME = sindri.utils.misc.get_actual_home_dir()
 
-SERVICE_FILENAME_BASE = "sindri-{mode}.service"
+SERVICE_FILENAME_BASE = SERVICE_NAME_TEMPLATE.format(
+    package_name="sindri", system_name=SYSTEM_NAME, mode="{mode}")
 SERVICE_DESCRIPTION_BASE = (
-    "Recieve and visualize data from IoT sensors ({mode} mode)")
-EXEC_BASE = f"{sys.executable} -m sindri start --mode '{{mode}}'"
+    f"Sindri data visualization server for {SYSTEM_FULLNAME} ({{mode}} mode)")
+EXEC_BASE = (
+    f"{sys.executable} -m sindri {SYSTEM_PARAMETER} start --mode '{{mode}}'")
+
+USER_HOME = sindri.utils.misc.get_actual_home_dir()
 
 
 SERVICE_CONFIG = {
