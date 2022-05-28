@@ -75,6 +75,7 @@ setuptools.setup(
         "lektor>=3.1.3,<4",
         "MarkupSafe>=1,<2",
         "numpy>=1,<2",
+        "packaging>=17",
         "pandas>=1,<2",
         "serviceinstaller>=0.2.0; sys_platform == 'linux'",
         ],

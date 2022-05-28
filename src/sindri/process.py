@@ -4,10 +4,11 @@ Data ingest and processing code for Mjolnir (and other) data.
 """
 
 # Standard library imports
-import warnings
 from pathlib import Path
 
 # Third party imports
+import importlib_metadata
+import packaging.version
 import pandas as pd
 
 # Local imports
@@ -73,12 +74,16 @@ def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_CLIENT,
                      glob_pattern=GLOB_PATTERN_CLIENT):
     files_to_load = get_status_data_paths(
         n_days=n_days, lag=lag, data_dir=data_dir, glob_pattern=glob_pattern)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        status_data = pd.concat(
-            (pd.read_csv(file, error_bad_lines=False)
-             for file in files_to_load),
-            ignore_index=True, sort=False)
+
+    pandas_ver = packaging.version.parse(importlib_metadata.version("pandas"))
+    if pandas_ver < packaging.version.parse("1.3.0"):
+        read_csv_kwargs = {"error_bad_lines": False, "warn_bad_lines": True}
+    else:
+        read_csv_kwargs = {"on_bad_lines": "warn"}
+
+    status_data = pd.concat(
+        (pd.read_csv(file, **read_csv_kwargs) for file in files_to_load),
+        ignore_index=True, sort=False)
     return status_data
 
 
