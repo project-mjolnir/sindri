@@ -6,6 +6,7 @@ Utility functions for Sindri.
 import getpass
 from pathlib import Path
 import os
+import shutil
 import stat
 import sys
 import time
@@ -74,3 +75,36 @@ def get_actual_home_dir():
 def force_delete(action, name, exc):
     os.chmod(name, stat.S_IWRITE)
     os.remove(name)
+
+
+def copytree(
+        src,
+        dst,
+        ignore=None,
+        copy_function=shutil.copyfile,
+        ignore_patterns=None,
+        ):
+    source = Path(src).expanduser().resolve()
+    destination = Path(dst).expanduser().resolve()
+    if ignore is None and ignore_patterns is not None:
+        ignore = shutil.ignore_patterns(*ignore_patterns)
+
+    destination.mkdir(parents=True, exist_ok=True)
+
+    dir_items = [item.relative_to(source) for item in source.iterdir()]
+    if ignore:
+        exclude_items = ignore(str(source), [str(item) for item in dir_items])
+        dir_items = [
+            item for item in dir_items if str(item) not in exclude_items]
+    for item in dir_items:
+        source_item = source / item
+        destination_item = destination / item
+        if source_item.is_dir():
+            copytree(
+                str(source_item),
+                str(destination_item),
+                ignore=ignore,
+                copy_function=copy_function,
+                )
+        else:
+            copy_function(source_item, destination_item)

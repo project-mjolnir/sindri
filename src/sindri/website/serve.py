@@ -4,7 +4,6 @@ Code to generate, build and deploy the Mjolnir status website.
 
 # Standard library imports
 import configparser
-import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -84,13 +83,12 @@ def rebuild_project(
         output_path=LEKTOR_PROJECT_PATH,
         mode=None,
         ):
-    os.makedirs(output_path, exist_ok=True)
     try:
         shutil.rmtree(output_path, onerror=sindri.utils.misc.force_delete)
     except Exception:
         pass
-    shutil.copytree(source_path, output_path,
-                    ignore=shutil.ignore_patterns(*SOURCE_IGNORE_PATTERNS))
+    sindri.utils.misc.copytree(
+        source_path, output_path, ignore_patterns=SOURCE_IGNORE_PATTERNS)
 
     lektorproject_config = render_lektorproject(project_path=output_path)
     with open(output_path / LEKTOR_PROJECT_FILENAME, "w",
@@ -128,9 +126,7 @@ def build_deploy_lektor(mode, cache_dir, dest_dir=None, verbose=0):
             verbose=0,
             )
         build_dir = Path(build_dir_output.stdout.decode().strip())
-        dest_dir = Path(dest_dir)
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(build_dir, dest_dir, dirs_exist_ok=True)
+        sindri.utils.misc.copytree(build_dir, dest_dir)
     if mode == "client":
         run_lektor(command="deploy", project_path=cache_dir, verbose=verbose)
 
