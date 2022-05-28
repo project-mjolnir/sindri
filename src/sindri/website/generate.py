@@ -13,6 +13,7 @@ import time
 import traceback
 
 # Third party imports
+import importlib_metadata
 import numpy as np
 import pandas as pd
 
@@ -786,36 +787,20 @@ def generate_build_info(project_path=None, output_path=BUILDINFO_DATABAG_PATH):
     build_time = datetime.datetime.utcnow()
     sindri_version = sindri.__version__
 
-    lektor_version = "NULL"
-    imported_pkg_resources = False
     try:
-        import pkg_resources
-        imported_pkg_resources = True
-    except Exception:
-        try:
-            import pip._vendor.pkg_resources as pkg_resources
-            imported_pkg_resources = True
-        except Exception as e:
-            print("Error importing pkg_resources to get version string: "
-                  f"{type(e)} : {e}")
-
-    try:
-        for package in pkg_resources.working_set:
-            if package.project_name.lower() == "lektor":
-                lektor_version = package.version
-                break
-    except Exception as e:
-        if imported_pkg_resources:
-            print("Error getting Lektor version from pkg_resources: "
-                  f"{type(e)} : {e}")
+        lektor_version = importlib_metadata.version("lektor")
+    except Exception as error:
+        print("Error getting Lektor version:\n"
+              f"{type(error).__name__}: {error}")
+        lektor_version = "NULL"
 
     try:
         with open(Path(project_path) / LEKTOR_ICON_VERSION_PATH, "r",
                   encoding="utf-8") as lektor_icon_version_file:
             lektor_icon_version = lektor_icon_version_file.read()
-    except Exception as e:
-        print("Error getting Lektor-Icon version string: "
-              f"{type(e)} : {e}")
+    except Exception as error:
+        print("Error getting Lektor-Icon version string:\n"
+              f"{type(error).__name__}: {error}")
         lektor_icon_version = "NULL"
 
     version_string_template = (
