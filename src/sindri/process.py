@@ -21,7 +21,7 @@ from sindri.config.website import (
     DATETIME_FORMAT,
     GLOB_PATTERN_CLIENT,
     GLOB_PATTERN_SERVER,
-    GLOB_PATTERN_SUBDIR,
+    UNIT_DIRS_SERVER,
     )
 
 
@@ -47,16 +47,16 @@ def get_status_data_paths(
 def get_status_data_paths_bykey(
         n_days=None,
         data_dir=DATA_DIR_SERVER,
-        glob_subdir=GLOB_PATTERN_SUBDIR,
+        unit_dirs=UNIT_DIRS_SERVER,
         data_subdir=DATA_SUBDIR_SERVER,
         glob_pattern=GLOB_PATTERN_SERVER,
         **path_kwargs,
         ):
     paths_byunit = {}
-    for unit_dir in data_dir.glob(glob_subdir):
+    for unit_dir in unit_dirs:
         data_paths = get_status_data_paths(
             n_days=n_days,
-            data_dir=unit_dir / data_subdir,
+            data_dir=data_dir / unit_dir / data_subdir,
             glob_pattern=glob_pattern,
             **path_kwargs,
             )
@@ -124,19 +124,21 @@ def ingest_status_data_client(
     return status_data
 
 
-def ingest_status_data_server(n_days=None, data_dir=DATA_DIR_SERVER):
+def ingest_status_data_server(
+        n_days=None, data_dir=DATA_DIR_SERVER, unit_dirs=UNIT_DIRS_SERVER):
     status_data_units = {}
-    for unit_dir in data_dir.glob(GLOB_PATTERN_SUBDIR):
+    for unit_dir in unit_dirs:
+        data_subdir = data_dir / unit_dir / DATA_SUBDIR_SERVER
         try:
             raw_status_data = load_status_data(
                 n_days=n_days,
-                data_dir=unit_dir / DATA_SUBDIR_SERVER,
+                data_dir=data_subdir,
                 glob_pattern=GLOB_PATTERN_SERVER,
                 )
             status_data = preprocess_status_data(
                 raw_status_data, column_specs=())
         except Exception as error:
-            print(f"Error loading status data at {unit_dir.as_posix()!r}")
+            print(f"Error loading status data at {data_subdir.as_posix()!r}")
             print(f"{type(error).__name__}: {error}")
             continue
 
