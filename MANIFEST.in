@@ -4,6 +4,7 @@ prune src/sindri/website/mjolnir-website/themes/lektor-icon/images
 recursive-exclude src/sindri/website/mjolnir-website *.bak *.tmp *.temp *.orig *.log
 recursive-exclude src/sindri/website/mjolnir-website/themes/lektor-icon *.ttf
 include CHANGELOG.md
+include CONTRIBUTING.md
 include LICENSE.txt
 include README.md
 include ROADMAP.md
