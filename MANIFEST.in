@@ -1,2 +1,7 @@
-include README.md
+graft src/sindri/website/mjolnir-website
+prune src/sindri/website/mjolnir-website/themes/lektor-icon/example-site
+prune src/sindri/website/mjolnir-website/themes/lektor-icon/images
+recursive-exclude src/sindri/website/mjolnir-website *.bak *.tmp *.temp *.orig *.log
+recursive-exclude src/sindri/website/mjolnir-website/themes/lektor-icon *.ttf
 include CHANGELOG.md
+include README.md
