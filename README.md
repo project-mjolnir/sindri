@@ -6,6 +6,14 @@ See the built-in help of the ``sindri`` command this package installs for more d
 
 
 
+## License
+
+Copyright (c) 2019-2022 C.A.M. Gerlach, the UAH HAMMA Group and the Project Mjolnir Contributors
+
+This project is distributed under the terms of the MIT (Expat) License; see the [LICENSE.txt](./LICENSE.txt) for more details.
+
+
+
 ## Installation and Setup
 
 Built and tested under Python 3.7 (but should be compatible with Python >=3.6; lack thereof should be considered a bug), and should be forward-compatible with Python 3.8 (albeit as yet not fully tested).
