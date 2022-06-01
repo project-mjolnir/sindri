@@ -1,6 +1,15 @@
 # Sindri Changelog
 
 
+## Version 0.2.10 (2021-09-07)
+
+Maintenance release with the following changes:
+
+* Re-order plot sections to match usage
+* Modify color coding and thresholds to preferred values
+
+
+
 ## Version 0.2.9 (2020-10-23)
 
 Maintenance release with the following changes:
