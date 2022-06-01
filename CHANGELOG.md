@@ -1,6 +1,27 @@
 # Sindri Changelog
 
 
+## Version 0.2.11 (2021-05-31)
+
+Maintenance release with the following changes:
+
+* Fix null values not being handled properly in JSON on recent pandas versions
+* Use relative links in archive table to fix breakage when not at the site root
+* Fix NumPy deprecations and handle pandas deprecation warning
+* Add/update version constraints in dependency requirements
+* Add missing Sindri 0.2.10 release in Changelog
+
+
+
+## Version 0.2.10 (2021-09-07)
+
+Maintenance release with the following changes:
+
+* Re-order plot sections to match usage
+* Modify color coding and thresholds to preferred values
+
+
+
 ## Version 0.2.9 (2020-10-23)
 
 Maintenance release with the following changes:

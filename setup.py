@@ -69,9 +69,12 @@ setuptools.setup(
         },
     python_requires=">=3.6",
     install_requires=[
-        "lektor>=3.1",
-        "numpy",
-        "pandas",
+        "jinja2>=2,<3",
+        "lektor>=3.1.3,<4",
+        "MarkupSafe>=1,<2",
+        "numpy>=1,<2",
+        "pandas>=1,<2",
+        "serviceinstaller>=0.1.4; sys_platform == 'linux'",
         ],
     entry_points={
         "console_scripts": [

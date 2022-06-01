@@ -4,6 +4,7 @@ Basic processing code for HAMMA Mjolnir data.
 """
 
 # Standard library imports
+import warnings
 from pathlib import Path
 
 # Third party imports
@@ -78,9 +79,12 @@ def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_DEFAULT,
                      glob_pattern=GLOB_PATTERN_DEFAULT):
     files_to_load = get_status_data_paths(
         n_days=n_days, lag=lag, data_dir=data_dir, glob_pattern=glob_pattern)
-    status_data = pd.concat(
-        (pd.read_csv(file, error_bad_lines=False) for file in files_to_load),
-        ignore_index=True, sort=False)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        status_data = pd.concat(
+            (pd.read_csv(file, error_bad_lines=False)
+             for file in files_to_load),
+            ignore_index=True, sort=False)
     return status_data
 
 
