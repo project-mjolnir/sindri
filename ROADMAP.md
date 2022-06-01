@@ -1,49 +1,45 @@
 # Sindri Roadmap
 
 
-## Version 0.3.0 (Beginning of March 2020)
+## Version 0.4.0
 
-* Support for additional asynchronous (trigger) data
-* Full support for system status data
-* Allow disabling processing and switchable config to integrate Ivaldi
-* Add links to top bar, negative uptime, data latency and detail improvements
-* Use strict mode for scripts, fix validator errors and further refactoring
-
-
-
-## Version 0.4.0 (Mid-March 2020):
-
-* Receive monitoring and science packets from remote sensors and store to file
-* Add full multi-sensor support to sensor page
-* Build master all sensor dashboard
-* Add logging and config support from Brokkr
-* Only updated new data every call for far more efficient updates
-* Implement numerous refactoring improvements for cleaner code
+* Add support for multiple, configurable data sources on sensor unit pages
+* Fully support running on a central server ingesting multiple sensor units
+* Enable additional section types on sensor overview page
+* Move input/output paths and other static config options to a TOML file
+* Add support for injecting custom CSS stylesheets and JS scripts
+* Use strict mode and modern ES6 syntax for scripts & fix HTML/CSS techdebt
+* Further refactoring of Python codebase
 
 
 
-Version 1.0.0 (Beginning of April 2020)
+## Version 0.5.0
+
+* Add full logging support from Brokkr
+* Only update new data every call for far more efficient updates
+* Implement further refactoring improvements for cleaner code
+
+
+
+## Version 1.0.0
 
 * Implement fully object-oriented data receive, processing & display
-* Factor system-specific items out of core and into config and device profiles
 * Add basic unit and integration tests, and setup CIs
 * Write docstrings for all public functions
 
 
 
-## Version 1.1.0 (May 2020?)
+## Version 1.1.0
 
-* Handle settings data
 * Validate config with JSONschema
 * Improve formatting, style and presentation of raw data table
-* Add additional modules to all-sensor dashboard page
 
 
 
-## Version 2.0.0 (???)
+## Version 2.0.0
 
-* Add realtime lightning location processing, data and map
+* Add realtime location processing, data and map
 * Add settings panel to set color ranges, time ranges, plot settings, etc?
 * Push notifications for param alerts?
 * Add more dashboard plots
-* Custom loading icon
+* Add custom loading icon
