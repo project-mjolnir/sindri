@@ -121,7 +121,8 @@ def generate_argparser_main():
             "--dest-dir", help="Path to which to copy the site build output")
     for parser in parsers_add_verbose_arg:
         parser.add_argument(
-            "-v", "--verbose", action="count", help="Increase verbosity")
+            "-v", "--verbose", action="count", default=0,
+            help="Increase verbosity of output and loggin")
 
     return parser_main
 

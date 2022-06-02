@@ -16,13 +16,15 @@ import sindri.config.service
 
 
 def log_setup(verbose=None):
+    log_kwargs = {"stream": sys.stdout, "format": "{message}", "style": "{"}
     if verbose is None:
-        logging_level = 99
+        log_kwargs["level"] = 99
     elif verbose:
-        logging_level = "DEBUG"
+        log_kwargs["level"] = "DEBUG"
+        log_kwargs["format"] = "{levelname} | {name} | {message}"
     else:
-        logging_level = "INFO"
-    logging.basicConfig(stream=sys.stdout, level=logging_level)
+        log_kwargs["level"] = "INFO"
+    logging.basicConfig(**log_kwargs)
 
 
 def install_sindri_service(
