@@ -1,5 +1,5 @@
 """
-Data, plots and calculations for the HAMMA Mjolnir status website.
+Data, plots and calculations for the Mjolnir status website.
 """
 
 # Standard library imports
@@ -10,13 +10,16 @@ import os
 from pathlib import Path
 import shutil
 import time
+import traceback
 
 # Third party imports
+import importlib_metadata
 import numpy as np
 import pandas as pd
 
 # Local imports
 import sindri.process
+import sindri.website.preprocess
 import sindri.website.templates
 
 
@@ -36,7 +39,6 @@ DEFAULT_EXTENSION = "json"
 STATUS_UPDATE_INTERVAL_SECONDS = 10
 STATUS_UPDATE_INTERVAL_FAST_SECONDS = 1
 STATUS_UPDATE_INTERVAL_SLOW_SECONDS = 300
-
 
 DASHBOARD_DATA_ARGS_DEFAULT = {
     "data_functions": [
@@ -87,8 +89,13 @@ def write_data_json(output_data, path, by_line=False):
                   separators=separators, cls=CustomJSONEncoder)
 
 
-def write_lastupdate_json(path=None, lastupdate=None,
-                          lastupdate_data=None, extra_data=None):
+def write_lastupdate_json(
+        path=None,
+        lastupdate=None,
+        lastupdate_source=None,
+        lastupdate_sources=None,
+        extra_data=None,
+        ):
     if extra_data:
         output_data = extra_data
     else:
@@ -99,8 +106,11 @@ def write_lastupdate_json(path=None, lastupdate=None,
         output_data["lastUpdate"] = int(time.time() * 1000)
     else:
         output_data["lastUpdate"] = lastupdate
-    if lastupdate_data is not None:
-        output_data["lastUpdateData"] = int(lastupdate_data)
+
+    if lastupdate_source is not None:
+        output_data["lastUpdateSource"] = lastupdate_source
+    if lastupdate_sources is not None:
+        output_data["lastUpdateSources"] = lastupdate_sources
 
     if path:
         write_data_json(output_data=output_data, path=path)
@@ -108,18 +118,30 @@ def write_lastupdate_json(path=None, lastupdate=None,
 
 
 def check_update(input_path, lastupdate_path):
-    current_lastupdate = Path(input_path).stat().st_mtime_ns // 1000000
+    if isinstance(input_path, (str, os.PathLike)):
+        input_path = {
+            sindri.website.preprocess.DEFAULT_SUBPLOT_NAME: input_path}
+    current_lastupdate_times = {
+        key: Path(path).stat().st_mtime_ns // 1000000
+        for key, path in input_path.items()}
+    current_lastupdate = max(current_lastupdate_times.values())
     if Path(lastupdate_path).exists():
         with open(lastupdate_path, "r",
                   encoding="utf-8", newline="\n") as oldfile:
             old_lastupdate = json.load(oldfile)
-        if old_lastupdate["lastUpdateData"] == current_lastupdate:
+        if old_lastupdate["lastUpdateSource"] == current_lastupdate:
             write_lastupdate_json(
-                lastupdate_path, lastupdate=old_lastupdate["lastUpdate"],
-                lastupdate_data=current_lastupdate)
+                lastupdate_path,
+                lastupdate=old_lastupdate["lastUpdate"],
+                lastupdate_source=current_lastupdate,
+                lastupdate_sources=current_lastupdate_times,
+                )
             return False
-    write_lastupdate_json(path=lastupdate_path,
-                          lastupdate_data=current_lastupdate)
+    write_lastupdate_json(
+        path=lastupdate_path,
+        lastupdate_source=current_lastupdate,
+        lastupdate_sources=current_lastupdate_times,
+        )
     return True
 
 
@@ -173,14 +195,20 @@ def process_tabular_data(
     return output_data
 
 
-def get_dashboard_plot_data(full_data, plot_type, **kwargs):
+def get_dashboard_plot_data(full_data, plot_type, plot_data):
     if not plot_type:
         return None
 
     data_args = copy.deepcopy(DASHBOARD_DATA_ARGS_DEFAULT)
-    data_args.update(**kwargs)
+    data_args.update(**plot_data)
 
-    plot_data = []
+    if data_args.get("unit_id", None) is not None:
+        try:
+            full_data = full_data[data_args["unit_id"]]
+        except KeyError:
+            print(f'Unit {data_args["unit_id"]} data not found; skipping')
+            return [None] * 3
+
     if plot_type == "numeric":
         if callable(data_args["variable"]):
             base_data = data_args["variable"](full_data)
@@ -207,7 +235,7 @@ def get_dashboard_plot_data(full_data, plot_type, **kwargs):
         base_data = full_data
     else:
         raise ValueError("Plot type must be one of {None, 'numeric'}, not "
-                         + str(plot_type))
+                         + repr(plot_type))
 
     plot_data = tuple(safe_nan(overlay_function(data_function(base_data,
                                                               data_args)))
@@ -218,22 +246,28 @@ def get_dashboard_plot_data(full_data, plot_type, **kwargs):
 
 
 def generate_dashboard_data(
-        full_data, dashboard_plots,
-        output_path=None,
-        ):
+        full_data, dashboard_plots, output_path=None):
     dashboard_data = {}
     for plot_id, plot in dashboard_plots.items():
-        if plot["plot_type"]:
+        subplots = sindri.website.preprocess.preprocess_subplots(plot)
+        plot_data = {}
+        for subplot_id, subplot_params in subplots.items():
+            if not subplot_params["plot_type"]:
+                continue
             try:
-                plot_data = get_dashboard_plot_data(
+                subplot_data = get_dashboard_plot_data(
                     full_data,
-                    plot_type=plot["plot_type"],
-                    **plot["plot_data"],
+                    plot_type=subplot_params["plot_type"],
+                    plot_data=subplot_params["plot_data"],
                     )
-            except Exception as e:
-                print(str(type(e)), e)
-                plot_data = [None for __ in range(3)]
-            dashboard_data[plot_id] = plot_data
+            except Exception as error:
+                print("Error generating data for dashboard plot",
+                      plot_id, subplot_id)
+                print(f"{type(error).__name__}: {error}")
+                traceback.print_exc()
+                subplot_data = [None] * 3
+            plot_data[subplot_id] = subplot_data
+        dashboard_data[plot_id] = plot_data
 
     if dashboard_data and output_path:
         write_data_json(output_data=dashboard_data, path=output_path)
@@ -307,8 +341,21 @@ def generate_plot_data(
     return plot_data
 
 
-def generate_singlepage_data(page_blocks, full_data,
-                             input_path_default=None, output_path=None):
+def process_input_path(input_path):
+    if input_path is None:
+        return None
+
+    input_path = Path(input_path).expanduser()
+
+    # Handle input path if it is a glob
+    if "*" in input_path.stem or "?" in input_path.stem:
+        input_path = Path(list(
+            input_path.parents[0].glob(input_path.stem))[0])
+    return input_path
+
+
+def generate_singlepage_data(
+        page_blocks, full_data, input_path_default=None, output_path=None):
     data_function_map = {
         "dashboard": generate_dashboard_data,
         "table": generate_table_data,
@@ -319,18 +366,18 @@ def generate_singlepage_data(page_blocks, full_data,
     for section_id, block in page_blocks.items():
         if block["type"] == "generic":
             continue
-        input_path = Path(block["args"]["data_args"]
-                          .get("input_path", input_path_default))
 
-        # Handle input path if it is a glob
-        if "*" in input_path.stem or "?" in input_path.stem:
-            input_path = Path(input_path).expanduser()
-            input_path = Path(list(
-                input_path.parents[0].glob(input_path.stem))[0])
-            block["args"]["data_args"]["input_path"] = Path(input_path)
+        data_args = copy.deepcopy(block["args"]["data_args"])
+        input_path = data_args.get("input_path", input_path_default)
+
+        if isinstance(input_path, (str, os.PathLike)):
+            input_path = process_input_path(input_path)
+        elif input_path:
+            input_path = {
+                key: process_input_path(path)
+                for key, path in input_path.items()}
 
         if input_path is not None and output_path is not None:
-            input_path = input_path.expanduser()
             update_needed = check_update(
                 input_path,
                 output_path / (LASTUPDATE_FILENAME.format(
@@ -339,7 +386,6 @@ def generate_singlepage_data(page_blocks, full_data,
             if not update_needed:
                 continue
 
-        data_args = copy.deepcopy(block["args"]["data_args"])
         if data_args.get("input_path", None) is not None:
             data_args["input_path"] = input_path
         if data_args.get("output_path", None) is None:
@@ -384,9 +430,16 @@ def generate_daily_data(
                           **output_args)
 
 
-def generate_site_data(content_pages, project_path=None):
-    full_data = sindri.process.ingest_status_data(n_days=30)
-    input_path_default = sindri.process.get_status_data_paths(n_days=1)[0]
+def generate_site_data(content_pages, project_path=None, mode="test"):
+    if mode == "server":
+        full_data = sindri.process.ingest_status_data_server(n_days=7)
+        input_paths = sindri.process.get_status_data_paths_bykey(n_days=1)
+        input_path_default = {
+            key: paths[0] for key, paths in input_paths.items()}
+    else:
+        full_data = sindri.process.ingest_status_data_client(n_days=30)
+        input_path_default = sindri.process.get_status_data_paths(n_days=1)[0]
+
     if project_path:
         project_path = Path(project_path) / ASSET_PATH
     else:
@@ -437,13 +490,13 @@ def generate_step_strings(color_domain, color_range, endpoints,
     return step_strings
 
 
-def generate_steps(plot, color_map=None):
-    steps = plot["plot_params"].get("steps", None)
+def generate_steps(plot_params, plot_data, color_map=None):
+    steps = plot_params.get("steps", None)
     if steps is False:
         return ""
     if steps is None:
-        steps = lookup_in_map(plot["plot_data"].get("variable", None),
-                              color_map)
+        steps = lookup_in_map(
+            plot_data.get("variable", None), color_map)
     if not steps:
         return ""
     step_strings = generate_step_strings(
@@ -489,22 +542,51 @@ def generate_dashboard_block(
         ):
     widget_blocks = []
     all_plots = []
-    fast_update_plots = []
+    fast_update_plots = {}
     for plot_id, plot in data_args["dashboard_plots"].items():
-        layout_args = lookup_in_map(plot["plot_data"].get("variable", None),
-                                    layout_map)
-        layout_args["tick0"] = layout_args.get(
-            "range", plot["plot_params"].get("range", None))[0]
-        plot["plot_params"]["steps"] = generate_steps(plot, color_map)
-        widget_block = (sindri.website.templates.DASHBOARD_ITEM_TEMPLATE
-                        .format(plot_id=plot_id, **plot["plot_metadata"]))
-        widget_blocks.append(widget_block)
-        plot_setup = (sindri.website.templates.DASHBOARD_PLOT_TEMPLATE
-                      .format(plot_id=plot_id, **plot["plot_params"],
-                              **layout_args))
+        subplots = sindri.website.preprocess.preprocess_subplots(plot)
+        subplot_setup = []
+        for idx, subplot_params in enumerate(subplots.values()):
+            layout_args = lookup_in_map(
+                subplot_params["plot_data"].get("variable", None), layout_map)
+            layout_args["tick0"] = layout_args.get(
+                "range", subplot_params.get("range", None))[0]
+            subplot_params["steps"] = generate_steps(
+                subplot_params, subplot_params["plot_data"], color_map)
+
+            subplot_setup.append(
+                sindri.website.templates.DASHBOARD_SUBPLOT_TEMPLATE.format(
+                    plot_id=plot_id, **subplot_params, **layout_args))
+
+            if subplot_params["fast_update"]:
+                fast_update_plots[plot_id] = (
+                    fast_update_plots.get(plot_id, []) + [idx])
+
+        plot_grid  = ""
+        if len(subplots) > 1:
+            plot_grid = (
+                sindri.website.templates.DASHBOARD_PLOT_GRID_TEMPLATE.format(
+                    **plot["plot_params"]))
+
+        plot_fgcolor = plot["plot_params"].get(
+            "plot_fgcolor", list(subplots.values())[0].get("plot_fgcolor"))
+        plot_setup = sindri.website.templates.DASHBOARD_PLOT_TEMPLATE.format(
+            plot_id=plot_id,
+            subplot_list="\n".join(subplot_setup),
+            plot_grid=plot_grid,
+            **{**plot["plot_params"], "plot_fgcolor": plot_fgcolor},
+            **layout_args,
+            )
         all_plots.append(plot_setup)
-        if plot.get("fast_update", None):
-            fast_update_plots.append(plot_id)
+
+        keys_to_fill = {"plot_title", "plot_description", "card_url"}
+        plot_metadata = {
+            **{key: "" for key in  keys_to_fill}, **plot["plot_metadata"]}
+        widget_block = (
+            sindri.website.templates.DASHBOARD_ITEM_TEMPLATE.format(
+                plot_id=plot_id, **plot_metadata))
+        widget_blocks.append(widget_block)
+
     widgets = "\n".join(widget_blocks)
     update_script = sindri.website.templates.DASHBOARD_SCRIPT_TEMPLATE.format(
         section_id=section_id,
@@ -512,15 +594,16 @@ def generate_dashboard_block(
         data_path=data_path,
         lastupdate_path=lastupdate_path,
         update_interval_seconds=update_interval_seconds,
-        fast_update_plots=fast_update_plots,
+        fast_update_plots=json.dumps(fast_update_plots, indent=4),
         update_interval_fast_seconds=update_interval_fast_seconds,
         )
-    dashboard_block = (sindri.website.templates.DASHBOARD_SECTION_TEMPLATE
-                       .format(widgets=widgets,
-                               update_script=update_script,
-                               section_id=section_id,
-                               **block_metadata,
-                               ))
+    dashboard_block = (
+        sindri.website.templates.DASHBOARD_SECTION_TEMPLATE.format(
+            widgets=widgets,
+            update_script=update_script,
+            section_id=section_id,
+            **block_metadata,
+        ))
     return dashboard_block
 
 
@@ -677,6 +760,7 @@ def generate_singlepage_content(page_blocks):
         else:
             data_path = block["args"]["data_args"]["output_path"]
         lastupdate_path = LASTUPDATE_FILENAME.format(section_id=section_id)
+
         if block["metadata"].get("button_link", None) is True:
             block["metadata"]["button_link"] = data_path
         if block["metadata"].get("button_newtab", None) is not None:
@@ -684,12 +768,12 @@ def generate_singlepage_content(page_blocks):
                 block["metadata"]["button_newtab"]).lower()
 
         rendered_block = block_function_map[block["type"]](
-                block_metadata=block["metadata"],
-                section_id=section_id,
-                data_path=data_path,
-                lastupdate_path=lastupdate_path,
-                **block["args"],
-                )
+            block_metadata=block["metadata"],
+            section_id=section_id,
+            data_path=data_path,
+            lastupdate_path=lastupdate_path,
+            **block["args"],
+            )
         rendered_blocks.append(rendered_block)
     page_content = (sindri.website.templates.SINGLEPAGE_TEMPLATE
                     .format(content_blocks="\n".join(rendered_blocks)))
@@ -703,36 +787,20 @@ def generate_build_info(project_path=None, output_path=BUILDINFO_DATABAG_PATH):
     build_time = datetime.datetime.utcnow()
     sindri_version = sindri.__version__
 
-    lektor_version = "NULL"
-    imported_pkg_resources = False
     try:
-        import pkg_resources
-        imported_pkg_resources = True
-    except Exception:
-        try:
-            import pip._vendor.pkg_resources as pkg_resources
-            imported_pkg_resources = True
-        except Exception as e:
-            print("Error importing pkg_resources to get version string: "
-                  f"{type(e)} : {e}")
-
-    try:
-        for package in pkg_resources.working_set:
-            if package.project_name.lower() == "lektor":
-                lektor_version = package.version
-                break
-    except Exception as e:
-        if imported_pkg_resources:
-            print("Error getting Lektor version from pkg_resources: "
-                  f"{type(e)} : {e}")
+        lektor_version = importlib_metadata.version("lektor")
+    except Exception as error:
+        print("Error getting Lektor version:\n"
+              f"{type(error).__name__}: {error}")
+        lektor_version = "NULL"
 
     try:
         with open(Path(project_path) / LEKTOR_ICON_VERSION_PATH, "r",
                   encoding="utf-8") as lektor_icon_version_file:
             lektor_icon_version = lektor_icon_version_file.read()
-    except Exception as e:
-        print("Error getting Lektor-Icon version string: "
-              f"{type(e)} : {e}")
+    except Exception as error:
+        print("Error getting Lektor-Icon version string:\n"
+              f"{type(error).__name__}: {error}")
         lektor_icon_version = "NULL"
 
     version_string_template = (
@@ -746,7 +814,7 @@ def generate_build_info(project_path=None, output_path=BUILDINFO_DATABAG_PATH):
             pkg_name=pkg_name.replace("-", "&#8209;"),
             pkg_version=pkg_version, pkg_link=pkg_link)
         for pkg_name, pkg_version, pkg_link in (
-            ("Sindri", sindri_version, "https://github.com/hamma-dev/sindri"),
+            ("Sindri", sindri_version, "https://github.com/project-mjolnir/sindri"),
             ("Lektor", lektor_version, "https://www.getlektor.com/"),
             ("Lektor-Icon", lektor_icon_version,
              "https://spyder-ide.github.io/lektor-icon/"),

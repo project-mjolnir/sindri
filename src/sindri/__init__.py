@@ -1,5 +1,5 @@
 """
-Receive, process, monitor, store and serve data from scientific IoT sensors.
+Process, serve and visualize data from scientific IoT sensors.
 """
 
-from sindri._version import __version__
+__version__ = "0.3.0"

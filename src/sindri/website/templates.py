@@ -36,6 +36,8 @@ description: {section_description}
 ----
 nav_label: {section_nav_label}
 ----
+link_whole_card: true
+----
 widgets:
 
 {widgets}
@@ -52,6 +54,8 @@ DASHBOARD_ITEM_TEMPLATE = """
 title: {plot_title}
 -----
 description: {plot_description}
+-----
+url: {card_url}
 -----
 content:
 
@@ -72,6 +76,7 @@ var plotConfig_{section_id} = {{
 
 var lastCheck_{section_id} = null;
 var lastUpdate_{section_id} = null;
+var lastUpdateSources_{section_id} = {{}};
 var maxLatency_{section_id} = 0;
 
 var allPlots_{section_id} = {{
@@ -80,26 +85,35 @@ var allPlots_{section_id} = {{
 
 
 Object.keys(allPlots_{section_id}).forEach(function(plotid) {{
-    Plotly.newPlot(plotid, allPlots_{section_id}[plotid].data, allPlots_{section_id}[plotid].layout, plotConfig_{section_id});
+    var plotParams = allPlots_{section_id}[plotid];
+    var plotData = [];
+    for (let i = 0; i < plotParams.subplots.length; i++) {{
+        plotData.push(plotParams.subplots[i].data);
+    }};
+    Plotly.newPlot(plotid, plotData, plotParams.layout, plotConfig_{section_id});
 }});
 
-function updatePlot(allPlots, plotid, statusData) {{
-    data = allPlots[plotid].updateFunction(allPlots, plotid, statusData);
-    Plotly.restyle(plotid, data);
+function updateSubplot(allPlots, statusData, plotid, subplotidx) {{
+    var subplotParams = allPlots[plotid].subplots[subplotidx];
+    var newData = subplotParams.updateFunction(allPlots, statusData, plotid, subplotParams.subplotid, subplotidx);
+    Plotly.restyle(plotid, newData, subplotidx);
 }};
 
 
 var fastUpdatePlots_{section_id} = {fast_update_plots};
 
 function fastUpdateStatus_{section_id}() {{
-    if (fastUpdatePlots_{section_id}.length > 0 && lastCheck_{section_id} != null) {{
-        for (i = 0; i < fastUpdatePlots_{section_id}.length; i++) {{
-            updatePlot(allPlots_{section_id}, fastUpdatePlots_{section_id}[i], null);
-        }};
+    if (lastCheck_{section_id} != null) {{
+        Object.keys(fastUpdatePlots_{section_id}).forEach(function(plotid) {{
+            var subplotIndicies = fastUpdatePlots_{section_id}[plotid];
+            for (let i = 0; i < subplotIndicies.length; i++) {{
+                updateSubplot(allPlots_{section_id}, null, plotid, subplotIndicies[i]);
+            }};
+        }});
     }};
 }};
 
-if (fastUpdatePlots_{section_id}.length > 0) {{
+if (Object.keys(fastUpdatePlots_{section_id}).length > 0) {{
     setInterval(fastUpdateStatus_{section_id}, {update_interval_fast_seconds} * 1000);
 }};
 
@@ -109,8 +123,10 @@ xhrUpdate_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
         var statusData = JSON.parse(this.responseText);
         Object.keys(allPlots_{section_id}).forEach(function(plotid) {{
-            if (fastUpdatePlots_{section_id}.indexOf(plotid) == -1) {{
-                updatePlot(allPlots_{section_id}, plotid, statusData);
+            for (let i = 0; i < allPlots_{section_id}[plotid].subplots.length; i++) {{
+                if (!(fastUpdatePlots_{section_id}.hasOwnProperty(plotid)) || (fastUpdatePlots_{section_id}[plotid].indexOf(i) == -1)) {{
+                    updateSubplot(allPlots_{section_id}, statusData, plotid, i);
+                }};
             }};
         }});
     }};
@@ -126,9 +142,10 @@ xhrCheck_{section_id}.onreadystatechange = function() {{
             fastUpdateStatus_{section_id}();
             var currentUpdate = new Date(lastUpdateData.lastUpdate);
             if (lastUpdate_{section_id} == null || lastUpdate_{section_id}.getTime() != currentUpdate.getTime()) {{
-                    lastUpdate_{section_id} = currentUpdate;
-                    xhrUpdate_{section_id}.open("GET", "{data_path}", true);
-                    xhrUpdate_{section_id}.send();
+                lastUpdate_{section_id} = currentUpdate;
+                lastUpdateSources_{section_id} = lastUpdateData.lastUpdateSources;
+                xhrUpdate_{section_id}.open("GET", "{data_path}", true);
+                xhrUpdate_{section_id}.send();
             }};
         }};
     }};
@@ -147,57 +164,82 @@ setInterval(updateStatus_{section_id}, {update_interval_seconds} * 1000);
 
 DASHBOARD_PLOT_TEMPLATE = """
 {plot_id}: {{
-    data: [
-        {{
-            domain: {{ x: [0, 1], y: [0, 1] }},
-            value: {gauge_value},
-            type: "indicator",
-            mode: "{plot_mode}",
-            delta: {{
-                decreasing: {{ color: "{decreasing_color}" }},
-                increasing: {{ color: "{increasing_color}" }},
-                reference: {delta_reference},
-            }},
-            gauge: {{
-                axis: {{
-                    automargin: true,
-                    autotick: false,
-                    color: "{plot_fgcolor}",
-                    dtick: {dtick},
-                    range: {range},
-                    tick0: {tick0},
-                    ticksuffix: "{suffix}",
-                    tickangle: 0,
-                    tickwidth: 1,
-                }},
-                bar: {{ color: "cyan" }},
-                bgcolor: "{plot_fgcolor}",
-                borderwidth: 0,
-                bordercolor: "black",
-                steps: [ {steps}],
-                threshold: {{
-                    line: {{ color: "black", width: 4 }},
-                    thickness: {threshold_thickness},
-                    value: {threshold_value},
-                }},
-            }},
-            number: {{
-                font: {{ color: "{number_color}" }},
-                suffix: "{suffix}",
-            }},
-        }},
-    ],
+    subplots: [
+        {subplot_list}
+        ],
     layout: {{
         autosize: true,
         font: {{ color: "{plot_fgcolor}" }},
+        {plot_grid}
         height: 200,
         margin: {{ t: 25, b: 5, l: 50, r: 50 }},
         paper_bgcolor: "rgba(0, 0, 0, 0)",
         plot_bgcolor: "rgba(0, 0, 0, 0)",
         seperators: ". ",
     }},
-    updateFunction: function(allPlots, plotid, statusData) {{
-        data = {{}};
+}},
+
+"""
+
+
+DASHBOARD_PLOT_GRID_TEMPLATE = """
+    grid: {{
+        columns: {subplot_columns},
+        rows: {subplot_rows},
+        roworder: "top to bottom",
+        pattern: "independent",
+    }},
+
+"""
+
+
+DASHBOARD_SUBPLOT_TEMPLATE = """
+{{
+    subplotid: "{subplot_id}",
+    data: {{
+        value: {gauge_value},
+        type: "indicator",
+        title: {{
+            text: "{subplot_title}",
+            font: {{ color: "{plot_fgcolor}", size: {subplot_titlesize} }},
+        }},
+        domain: {{ column: {subplot_column}, row: {subplot_row} }},
+        mode: "{plot_mode}",
+        delta: {{
+            decreasing: {{ color: "{decreasing_color}" }},
+            increasing: {{ color: "{increasing_color}" }},
+            reference: {delta_reference},
+        }},
+        gauge: {{
+            axis: {{
+                automargin: true,
+                autotick: false,
+                color: "{plot_fgcolor}",
+                dtick: {dtick},
+                range: {range},
+                tick0: {tick0},
+                ticksuffix: "{suffix}",
+                tickangle: 0,
+                tickwidth: 1,
+            }},
+            bar: {{ color: "cyan" }},
+            bgcolor: "{plot_fgcolor}",
+            borderwidth: 0,
+            bordercolor: "black",
+            steps: [ {steps} ],
+            threshold: {{
+                line: {{ color: "black", width: 4 }},
+                thickness: {threshold_thickness},
+                value: {threshold_value},
+            }},
+        }},
+        number: {{
+            font: {{ color: "{number_color}" }},
+            suffix: "{suffix}",
+        }},
+    }},
+    updateFunction: function(allPlots, statusData, plotid, subplotid, subplotidx) {{
+        let data = {{}};
         {plot_update_code}
         return data;
     }},
@@ -205,17 +247,18 @@ DASHBOARD_PLOT_TEMPLATE = """
 
 """
 
+
 GAUGE_PLOT_UPDATE_CODE_VALUE = """
-data["value"] = statusData[plotid][0];
-data["delta.reference"] = statusData[plotid][1];
-data["gauge.threshold.value"] = statusData[plotid][2];
+data["value"] = statusData[plotid][subplotid][0];
+data["delta.reference"] = statusData[plotid][subplotid][1];
+data["gauge.threshold.value"] = statusData[plotid][subplotid][2];
 
 """
 
 GAUGE_PLOT_UPDATE_CODE_COLOR = """
 var foundStep = false;
-var allSteps = allPlots[plotid].data[0].gauge.steps;
-for (i = 0; i < allSteps.length; i++) {
+var allSteps = allPlots[plotid].subplots[subplotidx].data.gauge.steps;
+for (let i = 0; i < allSteps.length; i++) {
     if (data["value"] >= allSteps[i].range[0] && data["value"] <= allSteps[i].range[1]) {
         data["number.font.color"] = allSteps[i].color;
         foundStep = true;
@@ -389,7 +432,7 @@ xhrUpdate_{section_id}.onreadystatechange = function() {{
     if (this.readyState == XMLHttpRequest.DONE && this.status < 300 && this.status >= 200) {{
         var outputText = this.responseText;
         outputText = outputText.replace(new RegExp("\\n", "g"), "\\n<br>\\n");
-        for (i = 0; i < replaceItems.length; i++) {{
+        for (let i = 0; i < replaceItems.length; i++) {{
             var regexPattern = new RegExp(replaceItems[i][0], "g");
             outputText = outputText.replace(regexPattern, replaceItems[i][1]);
         }};
@@ -485,7 +528,7 @@ function unpack(data, key) {{
 }};
 
 function createSubplots(plotid, subplotList, data) {{
-    for (i = 0; i < subplotList.length; i++) {{
+    for (let i = 0; i < subplotList.length; i++) {{
         subplotList[i].x = unpack(data, "{x_variable}");
         subplotList[i].y = unpack(data, subplotList[i].name);
     }};
@@ -493,7 +536,7 @@ function createSubplots(plotid, subplotList, data) {{
 }};
 
 function updateSubplots(plotid, subplotList, data) {{
-    for (i = 0; i < subplotList.length; i++) {{
+    for (let i = 0; i < subplotList.length; i++) {{
         var data = {{}}
         data["x"] = unpack(data, "{x_variable}");
         data["y"] = unpack(data, subplotList[i].name);
@@ -613,7 +656,7 @@ function parseQueryParams(query) {{
     }};
     var queryParams = {{}};
     var queryElements = query.split("&");
-    for (var i = 0; i < queryElements.length; i++) {{
+    for (let i = 0; i < queryElements.length; i++) {{
         var queryPair = queryElements[i].split("=");
         var key = decodeURIComponent(queryPair[0]);
         var value = decodeURIComponent(queryPair[1]);
@@ -624,7 +667,7 @@ function parseQueryParams(query) {{
 
 function serializeQueryParams(queryParams) {{
     var queryString = [];
-    for (var param in queryParams) {{
+    for (let param in queryParams) {{
         if (queryParams.hasOwnProperty(param)) {{
             queryString.push(encodeURIComponent(param) + "=" + encodeURIComponent(queryParams[param]));
         }};

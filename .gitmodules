@@ -1,4 +1,4 @@
 [submodule "src/sindri/mjolnir-website/themes/lektor-icon"]
 	path = src/sindri/website/mjolnir-website/themes/lektor-icon
-	url = https://github.com/hamma-dev/lektor-icon.git
-	branch = mjolnir-improvements
+	url = https://github.com/project-mjolnir/lektor-icon.git
+	branch = sindri-0.3.x

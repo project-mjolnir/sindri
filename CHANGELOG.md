@@ -1,6 +1,51 @@
 # Sindri Changelog
 
 
+## Version 0.3.0 (2022-06-03)
+
+Major release supporting Python 3.6-3.10.
+
+### Core features
+
+* Add new server mode generating an all-sensor overview dashboard page
+* Make data processing and website content fully configurable in Mjolnir system
+* Allow multiple, selectable unique data files per-section as input
+* Support per-system/mode services and many new install options/enhancements
+
+### Frontend enhancements
+
+* Upgrade site theme framework to add features, improve rendering and fix bugs
+* Add configurable subplot support to dashboard cards
+* Add option to make make dashboard cards clickable links
+* Support fully customizable lektorproject settings and deploy target generation
+* Remove remaining hard-coding for the HAMMA system
+
+### Backend improvements
+
+* Add full customization of input and output paths and patterns
+* Allow outputting the site to a customizable local directory as well as remote
+* Add and document `--system` and `--system-path` CLI options to control system
+* Add the full suite of options from `serve-website` to `sindri start`
+* Detect and print system name and version in `sindri --version`
+* Improve error handling in data ingest and processing
+
+### Bug fixes
+
+* Use ES6 `let` rather than `var` in loops to avoid multiple nasty JS bugs
+* Further improve compatibility with Pandas 1.3.0+
+* Fix other minor Python and JS issues
+
+### Under the hood
+
+* Replace legacy `pkg_resources` w/modern `packaging`/`importlib-metadata`
+* Modernize packaging infrastructure for PEP 517 w/pyproject.toml & setup.cfg
+* Update Release Guide to use more modern and robust procedure
+* Officially document support for Python 3.6-3.10 (up from only 3.6-3.8)
+* Add detailed Contributing Guide and greatly expand Readme
+* Improve code quality, performance and overall robustness/behavior
+
+
+
 ## Version 0.2.11 (2021-05-31)
 
 Maintenance release with the following changes:

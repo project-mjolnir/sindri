@@ -4,6 +4,7 @@ Install Sindri service and other items.
 """
 
 # Standard library imports
+import copy
 import logging
 import sys
 
@@ -15,25 +16,35 @@ import sindri.config.service
 
 
 def log_setup(verbose=None):
+    log_kwargs = {"stream": sys.stdout, "format": "{message}", "style": "{"}
     if verbose is None:
-        logging_level = 99
+        log_kwargs["level"] = 99
     elif verbose:
-        logging_level = "DEBUG"
+        log_kwargs["level"] = "DEBUG"
+        log_kwargs["format"] = "{levelname} | {name} | {message}"
     else:
-        logging_level = "INFO"
-    logging.basicConfig(stream=sys.stdout, level=logging_level)
+        log_kwargs["level"] = "INFO"
+    logging.basicConfig(**log_kwargs)
 
 
-def install_sindri_service(platform=None, verbose=None):
+def install_sindri_service(
+        mode="client",
+        account=None,
+        extra_args="",
+        verbose=None,
+        **serviceinstaller_args,
+        ):
     log_setup(verbose)
 
-    serviceinstaller.install_service(
-        sindri.config.service.SERVICE_DEFAULTS,
-        service_filename=sindri.config.service.SERVICE_FILENAME,
-        services_enable=sindri.config.service.SERVICES_ENABLE,
-        services_disable=sindri.config.service.SERVICES_DISABLE,
-        platform=platform,
-    )
+    service_config = copy.deepcopy(sindri.config.service.SERVICE_CONFIG[mode])
+    settings = service_config["service_settings"]["Service"]
+
+    if extra_args:
+        settings["ExecStart"] = settings["ExecStart"] + " " + extra_args
+    if account:
+        settings["User"] = account
+
+    serviceinstaller.install_service(**service_config, **serviceinstaller_args)
 
 
 if __name__ == "__main__":

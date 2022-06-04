@@ -5,6 +5,12 @@ Main-level command handling routine for running Sindri on the command line.
 
 # Standard library imports
 import argparse
+import os
+
+
+SYSTEM_PARAM = "system"
+SYSTEM_PATH_PARAM = "system_path"
+MODE_NAMES = {"test", "client", "server"}
 
 
 def generate_argparser_main():
@@ -14,9 +20,24 @@ def generate_argparser_main():
     parser_main.add_argument(
         "--version", action="store_true",
         help="If passed, will print the version and exit")
+    parser_main.add_argument(
+        "--system", dest=SYSTEM_PARAM,
+        help=("Use the system path registered in the systempath.toml file "
+              "that matches the passed system name, overriding the default."))
+    parser_main.add_argument(
+        "--system-path", dest=SYSTEM_PATH_PARAM,
+        help=("Sets the directory to use to load system config data. "
+              "Overrides the settings in the config, env var and --system."))
+
     subparsers = parser_main.add_subparsers(
         title="Subcommands", help="Subcommand to execute",
         metavar="Subcommand", dest="subcommand_name")
+
+    parsers_add_mode_arg = []
+    parsers_add_update_interval_arg = []
+    parsers_add_temp_cache_arg = []
+    parsers_add_dest_arg = []
+    parsers_add_verbose_arg = []
 
     # Parser for the version subcommand
     subparsers.add_parser(
@@ -30,65 +51,78 @@ def generate_argparser_main():
     parser_start = subparsers.add_parser(
         "start", help="Run Sindri as a continously updating service",
         argument_default=argparse.SUPPRESS)
-    parser_start.add_argument(
-        "--mode", type=str, choices=("test", "production"),
-        help="Run Sindri in test or production mode")
-    parser_start.add_argument(
-        "-v", "--verbose", action="count", help="Increase verbosity of output")
+    parsers_add_mode_arg.append(parser_start)
+    parsers_add_update_interval_arg.append(parser_start)
+    parsers_add_dest_arg.append(parser_start)
+    parsers_add_verbose_arg.append(parser_start)
 
     # Parser for the deploy-website subcommand
     parser_deploy = subparsers.add_parser(
         "deploy-website", help="Generate or deploy the status website",
         argument_default=argparse.SUPPRESS)
-    parser_deploy.add_argument(
-        "--mode", type=str, choices=("test", "production"),
-        help="Run in test (local server) or production (build & deploy) mode")
-    parser_deploy.add_argument(
-        "--temp-cache-dir", dest="cache_dir",
-        nargs="?", default=None, const=True,
-        help=(
-            "If passed with a path, will use it as the source cache dir "
-            "for the site. If passed alone, will use the temp cache dir "
-            "instead of the primary one (useful for serving a site locally "
-            "on-demand simultantiously with a production site). "
-            "If not passed, will use the default primary cache dir."
-            )),
-    parser_deploy.add_argument(
-        "-v", "--verbose", action="count", help="Increase verbosity of output")
+    parsers_add_mode_arg.append(parser_deploy)
+    parsers_add_temp_cache_arg.append(parser_deploy)
+    parsers_add_dest_arg.append(parser_deploy)
+    parsers_add_verbose_arg.append(parser_deploy)
 
     # Parser for the serve-website subcommand
     parser_serve = subparsers.add_parser(
         "serve-website", help="Run a continously updating website generator",
         argument_default=argparse.SUPPRESS)
-    parser_serve.add_argument(
-        "--mode", type=str, choices=("test", "production"),
-        help="Run in test (local server) or production (build & deploy) mode")
-    parser_serve.add_argument(
-        "--update-interval-s", type=float,
-        help="Minimum update interval of the site, in seconds")
-    parser_serve.add_argument(
-        "--temp-cache-dir", dest="cache_dir",
-        nargs="?", default=None, const=True,
-        help=(
-            "If passed with a path, will use it as the source cache dir "
-            "for the site. If passed alone, will use the temp cache dir "
-            "instead of the primary one (useful for serving a site locally "
-            "on-demand simultantiously with a production site). "
-            "If not passed, will use the default primary cache dir."
-            )),
-    parser_serve.add_argument(
-        "-v", "--verbose", action="count", help="Increase verbosity of output")
+    parsers_add_mode_arg.append(parser_serve)
+    parsers_add_update_interval_arg.append(parser_serve)
+    parsers_add_temp_cache_arg.append(parser_serve)
+    parsers_add_dest_arg.append(parser_serve)
+    parsers_add_verbose_arg.append(parser_serve)
 
     # Parser for the install-service subcommand
     parser_install_service = subparsers.add_parser(
         "install-service", help="Install Sindri as a systemd service (Linux)",
         argument_default=argparse.SUPPRESS)
     parser_install_service.add_argument(
+        "--account",
+        help="User account to run the service under, if not the current")
+    parser_install_service.add_argument(
+        "--output-path",
+        help="Path to write the service file, if not the platform default")
+    parser_install_service.add_argument(
+        "--skip-enable", action="store_true",
+        help="Skip enabling/disabling services, just write service file")
+    parser_install_service.add_argument(
         "--platform", choices=("linux", ),
         help="Manually override automatic platform detection")
     parser_install_service.add_argument(
-        "-v", "--verbose", action="store_true",
-        help="If passed, will print details of the exact actions executed")
+        "--extra-args", help="Extra args to pass when starting service")
+    parsers_add_mode_arg.append(parser_install_service)
+    parsers_add_verbose_arg.append(parser_install_service)
+
+    # Add common args
+    for parser in parsers_add_mode_arg:
+        parser.add_argument(
+            "--mode", type=str, choices=MODE_NAMES,
+            help="Run in test, client (Pi-side) or server (VPS-side) mode")
+    for parser in parsers_add_update_interval_arg:
+        parser.add_argument(
+            "--update-interval-s", type=float,
+            help="Minimum update interval of the site, in seconds")
+    for parser in parsers_add_temp_cache_arg:
+        parser.add_argument(
+            "--temp-cache-dir", dest="cache_dir",
+            nargs="?", default=None, const=True,
+            help=(
+                "If passed with a path, will use it as the source cache dir "
+                "for the site. If passed alone, will use the temp cache dir "
+                "instead of the primary one (useful for serving a site locally"
+                " on-demand simultantiously with a production site). "
+                "If not passed, will use the default primary cache dir."
+                )),
+    for parser in parsers_add_dest_arg:
+        parser.add_argument(
+            "--dest-dir", help="Path to which to copy the site build output")
+    for parser in parsers_add_verbose_arg:
+        parser.add_argument(
+            "-v", "--verbose", action="count", default=0,
+            help="Increase verbosity of output and loggin")
 
     return parser_main
 
@@ -102,9 +136,16 @@ def main():
     except Exception:  # Ignore any problem deleting the arg
         pass
 
+    for param in [SYSTEM_PARAM, SYSTEM_PATH_PARAM]:
+        if getattr(parsed_args, param, None):
+            os.environ[f"BROKKR_{param.upper()}"] = getattr(parsed_args, param)
+            delattr(parsed_args, param)
+
     if getattr(parsed_args, "version", None) or subcommand == "version":
         import sindri
-        print("Sindri version " + str(sindri.__version__))
+        print("Sindri version", sindri.__version__)
+        import brokkr.start
+        print(brokkr.start.generate_version_message().split(",")[-1].strip())
     elif subcommand == "help":
         parser_main.print_help()
     elif subcommand == "start":

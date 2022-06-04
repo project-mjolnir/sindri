@@ -1,3 +1,3 @@
 """
-Generate, build, deploy and serve the HAMMA Mjolnir website.
+Generate, build, deploy and serve the Mjolnir website.
 """
