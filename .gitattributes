@@ -1,5 +1,5 @@
 # Set version file to ignore conflicts between branches when merging
-src/sindri/_version.py merge=ours
+src/sindri/__init__.py merge=ours
 
 
 # Set the default behavior, in case people don't have core.autocrlf set.
