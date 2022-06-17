@@ -23,6 +23,7 @@ from sindri.config.website import (
     GLOB_PATTERN_SERVER,
     UNIT_DIRS_SERVER,
     )
+import sindri.utils.misc
 
 
 FIGSIZE_DEFAULT = (8, 24)
@@ -81,9 +82,20 @@ def load_status_data(n_days=None, lag=None, data_dir=DATA_DIR_CLIENT,
     else:
         read_csv_kwargs = {"on_bad_lines": "warn"}
 
+    def _on_load_error(_error_obj, *pd_args, **pd_kwargs):
+        print(f"Error loading data at {pd_args[0].as_posix()!r}")
+        print(f"{type(_error_obj).__name__}: {_error_obj}")
+        return pd.DataFrame()
+
     status_data = pd.concat(
-        (pd.read_csv(file, **read_csv_kwargs) for file in files_to_load),
-        ignore_index=True, sort=False)
+        (
+            sindri.utils.misc.handle_errors(
+            on_error=_on_load_error)(pd.read_csv)(file, **read_csv_kwargs)
+            for file in files_to_load
+            ),
+        ignore_index=True,
+        sort=False,
+        )
     return status_data
 
 
@@ -138,7 +150,7 @@ def ingest_status_data_server(
             status_data = preprocess_status_data(
                 raw_status_data, column_specs=())
         except Exception as error:
-            print(f"Error loading status data at {data_subdir.as_posix()!r}")
+            print(f"Error loading data at {data_subdir.as_posix()!r}")
             print(f"{type(error).__name__}: {error}")
             continue
 
