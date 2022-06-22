@@ -3,6 +3,7 @@ Utility functions for Sindri.
 """
 
 # Standard library imports
+import functools
 import getpass
 from pathlib import Path
 import os
@@ -108,3 +109,17 @@ def copytree(
                 )
         else:
             copy_function(source_item, destination_item)
+
+
+def handle_errors(on_error=None):
+    def _decorator(inner_function):
+        @functools.wraps(inner_function)
+        def _wrapper(*inner_args, **inner_kwargs):
+            try:
+                return inner_function(*inner_args, **inner_kwargs)
+            except Exception as _error_obj:
+                if callable(on_error):
+                    return on_error(_error_obj, *inner_args, **inner_kwargs)
+                return on_error
+        return _wrapper
+    return _decorator
